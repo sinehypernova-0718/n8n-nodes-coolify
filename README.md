@@ -32,10 +32,12 @@ The Coolify node authenticates against the Coolify REST API with an API token, s
 ### Prerequisites
 
 - A Coolify instance — either [Coolify Cloud](https://coolify.io/pricing) or your own
-  self-hosted installation.
+  self-hosted installation (version 4.3.0 or newer, see [Compatibility](#compatibility)).
 - An API token created in Coolify under **Keys & Tokens → API Tokens**, scoped to the team you
   want to work with. The token carries the permissions selected at creation time
   (`read`, `write`, `root`), so create the least privileged token that covers your workflow.
+  The token needs the **`read`** permission — a deploy-only token cannot be tested, because the
+  credential test reads the team bound to the token.
 - On self-hosted instances, API access must be enabled by an administrator, and the caller must
   match the IP allowlist when one is configured.
 
@@ -43,11 +45,14 @@ The Coolify node authenticates against the Coolify REST API with an API token, s
 
 | Setting | Value |
 |---|---|
-| Host | Base URL of the Coolify API, without a trailing slash. Use `https://app.coolify.io/api/v1` for Coolify Cloud, or the URL of your own instance (for example `https://coolify.example.com/api/v1`). |
+| Base URL | Base URL of the Coolify API, including the `/api/v1` path. Use `https://app.coolify.io/api/v1` for Coolify Cloud, or the URL of your own instance (for example `https://coolify.example.com/api/v1`). A trailing slash is tolerated; the `/api/v1` suffix is required. |
 | Access Token | The API token created in Coolify. It is sent as `Authorization: Bearer <token>`. |
 
-The credential test calls `GET /teams/current` against the configured host, so it verifies the
-token against the same instance your workflows will use.
+The credential test calls `GET /team` against the configured base URL — the endpoint that
+returns the team bound to the token — so it verifies the token against the same instance your
+workflows will use. The test is read-only, and it reports whether a failure was caused by the
+token (401), by permissions, API access or the IP allowlist (403), or by a base URL that does not
+point at the API (404).
 
 Keep your token private. Never commit credentials to the repository or include tokens in issue
 reports, screenshots, or logs.
@@ -79,7 +84,7 @@ explicit. Nothing below is exposed in the node yet.
 | Deployment | Deploy | `POST /deployments` (by application tag or UUID) |
 | Deployment | List by application | `GET /deployments/{applicationUuid}` |
 | Deployment | Cancel | `POST /deployments/{uuid}/cancel` |
-| Team | Get current | `GET /teams/current` |
+| Team | Get current | `GET /team` |
 | System | Version / Healthcheck | `GET /version`, `GET /healthcheck` |
 
 Until those operations land, the node renders a notice in the n8n editor instead of exposing
@@ -92,7 +97,12 @@ This package is designed for n8n's community node ecosystem and uses the n8n nod
 - **Integration type:** n8n community node.
 - **Implementation language:** TypeScript.
 - **API:** Coolify API v1.
-- **Authentication:** Coolify API token (Bearer).
+- **Coolify version:** 4.3.0 or newer. The credential test uses `GET /team`, the canonical
+  endpoint for "the team bound to the token" in the
+  [Coolify OpenAPI specification](https://github.com/coollabsio/coolify/blob/main/openapi.yaml).
+  Coolify 4.0.x–4.2.x only expose the older `/teams/current` alias of the same endpoint, so the
+  credential test reports HTTP 404 on those instances.
+- **Authentication:** Coolify API token (Bearer), with the `read` permission.
 - **Package distribution:** npm — end users install the published package with the n8n
   community nodes interface, and npm remains the registry the package is published to.
 - **Development package manager:** pnpm — the repository is developed, built, and published with
@@ -147,7 +157,7 @@ pnpm install
 ```text
 n8n-nodes-coolify/
 ├── credentials/
-│   └── CoolifyApi.credentials.ts   # Coolify API token credential (host + token)
+│   └── CoolifyApi.credentials.ts   # Coolify API token credential (base URL + token)
 ├── nodes/
 │   └── Coolify/
 │       ├── Coolify.node.ts         # The node itself
@@ -194,6 +204,7 @@ version carries an npm provenance attestation (required by n8n for verified comm
 - [Coolify API documentation](https://coolify.io/docs/api/overview)
 - [Coolify API authorization](https://coolify.io/docs/api/authorization)
 - [Coolify API tokens](https://coolify.io/docs/core/security/credentials/api-tokens)
+- [Coolify API — Authenticated Team (`GET /team`)](https://coolify.io/docs/api/endpoints/teams/get-token-team)
 
 ## License
 
