@@ -90,6 +90,31 @@ explicit. Nothing below is exposed in the node yet.
 Until those operations land, the node renders a notice in the n8n editor instead of exposing
 GitHub Issues resources that the starter template shipped with.
 
+## Rate limits and retries
+
+All Coolify API calls go through one shared transport
+(`nodes/Coolify/shared/apiRequest.ts`) that applies the retry policy of
+`nodes/Coolify/shared/rateLimit.ts`. The policy follows the
+[Coolify rate-limit documentation](https://coolify.io/docs/api/rate-limits).
+
+- **The limit is never hardcoded.** The documented default is 200 requests per minute, but a
+  self-hosted instance can change it with the `API_RATE_LIMIT` environment variable, so the
+  server's response headers are the only source of truth.
+- **Only requests that are safe to repeat are retried.** Reads (`GET`, `HEAD`, `OPTIONS`) are
+  retried on `408`, `429`, transient `5xx` responses and transport failures. Writes are never
+  retried automatically: a `429` alone is no proof that a write can be repeated, because Coolify
+  also answers `429` when a deployment queue or an upstream provider is busy. A write is only
+  retried when the operation explicitly declares that a repeat is harmless.
+- **The wait comes from the server.** `Retry-After` (seconds) is honoured exactly, `X-RateLimit-Reset`
+  (unix timestamp) is the fallback, and an exponential backoff with random jitter is used when the
+  response carries neither. A server-mandated wait longer than the internal maximum wait of 60
+  seconds fails the request instead of retrying early.
+- **At most three retries** per request, and never in parallel.
+- Permanent failures (`400`, `401`, `403`, `404`, `409`, `422`) are surfaced immediately, with the
+  Coolify message, the status code and the response body preserved.
+
+The retry limits and timeouts are internal constants. There are no node-level options for them.
+
 ## Compatibility
 
 This package is designed for n8n's community node ecosystem and uses the n8n node API.
@@ -143,6 +168,8 @@ pnpm install
 | `pnpm run build` | Compile TypeScript to JavaScript for production (runs `n8n-node build`) |
 | `pnpm run build:watch` | Build in watch mode (auto-rebuild on changes) |
 | `pnpm run lint` | Check your code for errors and style issues (runs `n8n-node lint`) |
+| `pnpm run test` | Run the unit tests (runs `vitest run`) |
+| `pnpm run test:watch` | Run the unit tests in watch mode (runs `vitest`) |
 | `pnpm run lint:fix` | Automatically fix linting issues when possible (runs `n8n-node lint --fix`) |
 | `pnpm run release:local` | Create a release locally: bump the version, update the changelog, commit, tag (`vX.Y.Z`), and push — this triggers the publish workflow |
 | `pnpm run release` | The publish entry point used by the GitHub Actions publish workflow: lints, builds, and publishes to npm with provenance |
@@ -161,11 +188,17 @@ n8n-nodes-coolify/
 ├── nodes/
 │   └── Coolify/
 │       ├── Coolify.node.ts         # The node itself
-│       └── Coolify.node.json       # n8n codex metadata (categories, documentation links)
+│       ├── Coolify.node.json       # n8n codex metadata (categories, documentation links)
+│       └── shared/
+│           ├── apiRequest.ts       # Shared authenticated transport with the retry policy
+│           └── rateLimit.ts        # Rate-limit policy, header parsing and delay calculation
+├── test/
+│   ├── apiRequest.test.ts          # Tests for the shared transport
+│   └── rateLimit.test.ts           # Tests for the rate-limit policy
 ├── icons/
 │   └── coolify.svg                 # Node and credential icon
 ├── .github/workflows/
-│   ├── ci.yml                      # Lint + build on pushes to master and on pull requests
+│   ├── ci.yml                      # Lint + tests + build on pushes to master and on pull requests
 │   └── publish.yml                 # Publishes to npm on v*.*.* tags
 ├── .release-it.json                # Local release configuration (branch, tag format, changelog)
 ├── package.json                    # Package metadata and scripts
