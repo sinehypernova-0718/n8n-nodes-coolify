@@ -4,6 +4,7 @@ import {
 	type IHttpRequestOptions,
 	type IN8nHttpFullResponse,
 	type INode,
+	type JsonObject,
 } from 'n8n-workflow';
 
 import {
@@ -61,13 +62,32 @@ function isRaw(outcome: Outcome): outcome is RawOutcome {
 	return 'raw' in outcome;
 }
 
-function createContext(outcomes: Outcome[]) {
+/**
+ * A transport failure, as the n8n runtime reports it.
+ *
+ * `httpRequestWithAuthentication` catches the failure of the HTTP client and
+ * throws `new NodeApiError(node, error)`. That wrapper overwrites the `cause`
+ * of the original error, stores the transport error code in `httpCode`,
+ * replaces the message with a generic description and keeps the original text
+ * in the error messages. This helper reproduces that structure exactly, so the
+ * tests exercise the same error shape as a real execution.
+ */
+function n8nTransportFailure(code: string, originalMessage: string): NodeApiError {
+	const upstream = Object.assign(new Error(originalMessage), {
+		code,
+		isAxiosError: true,
+	});
+	return new NodeApiError(node, upstream as unknown as JsonObject);
+}
+
+function createContext(outcomes: Outcome[], options: { cancelSignal?: AbortSignal } = {}) {
 	const calls: RecordedCall[] = [];
 	const events: string[] = [];
 
 	const ctx = {
 		getCredentials: async () => ({ host: 'https://coolify.example.com/api/v1' }),
 		getNode: () => node,
+		getExecutionCancelSignal: () => options.cancelSignal,
 		helpers: {
 			httpRequestWithAuthentication: async (
 				credentialType: string,
@@ -227,6 +247,102 @@ describe('coolifyApiRequest', () => {
 		expect(calls).toHaveLength(2);
 	});
 
+	it('retries a read when the runtime reports a reset connection', async () => {
+		const { ctx, calls } = createContext([
+			{ throws: n8nTransportFailure('ECONNRESET', 'socket hang up') },
+			{ status: 200, body: { ok: true } },
+		]);
+		const { runtime } = createRuntime();
+
+		await coolifyApiRequest(ctx, 'GET', '/applications', { runtime });
+
+		expect(calls).toHaveLength(2);
+	});
+
+	it('retries a read when the runtime reports a timeout', async () => {
+		const { ctx, calls } = createContext([
+			{ throws: n8nTransportFailure('ECONNABORTED', 'timeout of 30000ms exceeded') },
+			{ status: 200, body: { ok: true } },
+		]);
+		const { runtime } = createRuntime();
+
+		await coolifyApiRequest(ctx, 'GET', '/applications', { runtime });
+
+		expect(calls).toHaveLength(2);
+	});
+
+	it('retries a read when the runtime reports an unreachable host', async () => {
+		const { ctx, calls } = createContext([
+			{
+				throws: n8nTransportFailure('ENOTFOUND', 'getaddrinfo ENOTFOUND coolify.example.com'),
+			},
+			{ status: 200, body: { ok: true } },
+		]);
+		const { runtime } = createRuntime();
+
+		await coolifyApiRequest(ctx, 'GET', '/applications', { runtime });
+
+		expect(calls).toHaveLength(2);
+	});
+
+	it('reports the transport error code when a mutation fails on the network', async () => {
+		const { ctx, calls } = createContext([
+			{ throws: n8nTransportFailure('ECONNRESET', 'socket hang up') },
+		]);
+		const { runtime } = createRuntime();
+
+		const error = await catchError(
+			coolifyApiRequest(ctx, 'POST', '/deployments', { body: { uuid: 'abc' }, runtime }),
+		);
+
+		expect(calls).toHaveLength(1);
+		expect(error.description).toMatch(/not retried automatically/);
+		expect(error.description).toContain('ECONNRESET');
+		// The n8n runtime replaces the message with its own description of the
+		// error code and keeps the original message in the error messages.
+		expect(error.message).toContain('connection to the server was closed unexpectedly');
+		expect(error.messages).toContain('Coolify API request failed (ECONNRESET)');
+	});
+
+	it('retries a read when the runtime rejects a failing status itself', async () => {
+		// A runtime without `ignoreHttpStatusErrors` support rejects the request
+		// and wraps the status in a `NodeApiError`.
+		const { ctx, calls } = createContext([
+			{
+				throws: new NodeApiError(node, {
+					message: 'Rate limit exceeded.',
+					httpCode: '429',
+					response: { data: { message: 'Rate limit exceeded.' } },
+				}),
+			},
+			{ status: 200, body: { ok: true } },
+		]);
+		const { runtime } = createRuntime();
+
+		await coolifyApiRequest(ctx, 'GET', '/applications', { runtime });
+
+		expect(calls).toHaveLength(2);
+	});
+
+	it('keeps the Coolify body of a status the runtime rejected itself', async () => {
+		const { ctx, calls } = createContext([
+			{
+				throws: new NodeApiError(node, {
+					message: 'Domain already exists.',
+					httpCode: '409',
+					response: { data: { message: 'Domain already exists.' } },
+				}),
+			},
+		]);
+		const { runtime } = createRuntime();
+
+		const error = await catchError(coolifyApiRequest(ctx, 'GET', '/applications', { runtime }));
+
+		expect(calls).toHaveLength(1);
+		expect(error.httpCode).toBe('409');
+		expect(error.context.data).toEqual({ message: 'Domain already exists.' });
+	});
+
 	it('never retries a permanent failure and reports it like the n8n runtime', async () => {
 		const { ctx, calls } = createContext([{ status: 404, body: { message: 'Not found.' } }]);
 		const { runtime } = createRuntime();
@@ -349,6 +465,24 @@ describe('coolifyApiRequest', () => {
 		await coolifyApiRequest(ctx, 'GET', '/applications', { runtime });
 
 		expect(events).toEqual(['start', 'end', 'start', 'end', 'start', 'end']);
+	});
+
+	it('stops waiting for the next attempt when the execution is cancelled', async () => {
+		const controller = new AbortController();
+		controller.abort();
+		const { ctx, calls } = createContext([{ status: 429, headers: { 'retry-after': '30' } }], {
+			cancelSignal: controller.signal,
+		});
+
+		// No runtime seam here, so the real wait is used and the cancellation
+		// signal of the execution is honoured.
+		const error = await coolifyApiRequest(ctx, 'GET', '/applications').then(
+			() => undefined,
+			(caught: unknown) => caught,
+		);
+
+		expect((error as Error).name).toBe('ManualExecutionCancelledError');
+		expect(calls).toHaveLength(1);
 	});
 
 	it('sends the configured base URL without a duplicated slash', async () => {

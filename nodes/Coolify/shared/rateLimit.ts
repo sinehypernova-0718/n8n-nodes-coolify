@@ -27,6 +27,23 @@
  *
  * Client policy (not documented by Coolify) lives here as well, and is marked
  * as such in the individual constants below.
+ *
+ * How the n8n runtime reports a failed request
+ * (https://github.com/n8n-io/n8n/blob/master/packages/core/src/execution-engine/node-execution-context/utils/request-helpers/authentication.ts):
+ *
+ * - A failing HTTP status and a transport failure are both wrapped in a
+ *   `NodeApiError` (https://github.com/n8n-io/n8n/blob/master/packages/workflow/src/errors/node-api.error.ts).
+ * - That wrapper keeps the original error as its `cause`, but overwrites the
+ *   `cause` property, so the original error is usually not reachable.
+ * - The original transport error code (`ECONNRESET`, `ETIMEDOUT`, …) is stored
+ *   in the wrapper's `httpCode`, and the original error text survives in the
+ *   wrapper's messages, while the wrapper's `message` is a generic
+ *   description.
+ * - The response body of a failed request is stored in the wrapper's context.
+ *
+ * The helpers below therefore read the status code, the transport code, the
+ * body and the original text from all of those places, so that a failure is
+ * classified the same way no matter which of them the runtime provides.
  */
 
 /**
@@ -176,6 +193,9 @@ interface ErrorLike {
 	httpCode?: unknown;
 	code?: unknown;
 	message?: unknown;
+	description?: unknown;
+	messages?: unknown;
+	context?: { data?: unknown };
 	response?: {
 		status?: unknown;
 		statusCode?: unknown;
@@ -431,10 +451,13 @@ function findHeaders(chain: ErrorLike[]): HeaderMap | undefined {
 
 /**
  * Read the response body from an error chain.
+ *
+ * The n8n runtime stores the parsed response body of a failed request in the
+ * error context, so it is read from there as well as from the raw response.
  */
 function findBody(chain: ErrorLike[]): unknown {
 	for (const level of chain) {
-		const data = level.response?.data;
+		const data = level.response?.data ?? level.context?.data;
 		if (data !== undefined && data !== null && data !== '') {
 			return data;
 		}
@@ -454,21 +477,105 @@ function findBodyMessage(body: unknown): string | undefined {
 }
 
 /**
+ * Read a transport error code from a value.
+ */
+function readCode(value: unknown): string | undefined {
+	if (typeof value !== 'string') {
+		return undefined;
+	}
+	const code = value.trim().toUpperCase();
+	return code === '' ? undefined : code;
+}
+
+/**
+ * The error texts of one level of an error chain.
+ *
+ * The n8n runtime replaces the message of a failed request with a generic
+ * description, but keeps the original text in the error messages, so all of
+ * them are inspected.
+ */
+function messageTexts(level: ErrorLike): string[] {
+	const texts: string[] = [];
+
+	if (typeof level.message === 'string') {
+		texts.push(level.message);
+	}
+	if (typeof level.description === 'string') {
+		texts.push(level.description);
+	}
+	if (Array.isArray(level.messages)) {
+		for (const message of level.messages) {
+			if (typeof message === 'string') {
+				texts.push(message);
+			}
+		}
+	}
+
+	return texts;
+}
+
+/**
+ * Derive a transport error code from an error text.
+ */
+function codeFromMessage(text: string): string | undefined {
+	if (/socket hang up/i.test(text)) {
+		return 'ECONNRESET';
+	}
+	if (/timeout of \d+\s*ms exceeded/i.test(text)) {
+		return 'ETIMEDOUT';
+	}
+	for (const code of TRANSPORT_FAILURE_CODES) {
+		if (new RegExp(`\\b${code}\\b`).test(text)) {
+			return code;
+		}
+	}
+	return undefined;
+}
+
+/**
  * Read the transport error code from an error chain.
+ *
+ * The n8n runtime wraps a failed request in a `NodeApiError`, and that wrapper
+ * changes where the original information ends up:
+ *
+ * - The original error is kept as the `cause` of the wrapper, but the
+ *   `NodeApiError` class overwrites that property, so the original error is
+ *   usually *not* reachable through the chain.
+ * - The transport error code is not exposed as `code` either. The wrapper looks
+ *   the code up as if it were an HTTP status and stores it in `httpCode`, so
+ *   `httpCode` holds values such as `ECONNRESET` or `ETIMEDOUT` for a request
+ *   that never produced a response, and a numeric status such as `429` for a
+ *   request that did.
+ * - The original error text survives in the error messages, while `message` is
+ *   replaced by a generic description.
+ *
+ * All three places are therefore inspected, in that order.
  */
 function findNetworkCode(chain: ErrorLike[]): string | undefined {
 	for (const level of chain) {
-		const code = level.code;
-		if (typeof code === 'string' && code) {
-			return code.toUpperCase();
+		const code = readCode(level.code) ?? readCode((level.cause as ErrorLike | undefined)?.code);
+		if (code !== undefined) {
+			return code;
 		}
 	}
+
 	for (const level of chain) {
-		const message = level.message;
-		if (typeof message === 'string' && /socket hang up/i.test(message)) {
-			return 'ECONNRESET';
+		const code = readCode(level.httpCode);
+		// A numeric `httpCode` is an HTTP status, not a transport error code.
+		if (code !== undefined && !/^\d+$/.test(code)) {
+			return code;
 		}
 	}
+
+	for (const level of chain) {
+		for (const text of messageTexts(level)) {
+			const code = codeFromMessage(text);
+			if (code !== undefined) {
+				return code;
+			}
+		}
+	}
+
 	return undefined;
 }
 

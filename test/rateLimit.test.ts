@@ -237,6 +237,53 @@ describe('classifyFailure', () => {
 		expect(failure.bodyMessage).toBe('Rate limit exceeded.');
 		expect(failure.retryable).toBe(true);
 	});
+
+	it('recognises the transport error code of a wrapped n8n error', () => {
+		// The n8n runtime wraps a transport failure in a `NodeApiError`, which
+		// overwrites the `cause`, keeps the transport code in `httpCode` and
+		// replaces the message with a generic description.
+		const failure = classifyFailure({
+			httpCode: 'ECONNRESET',
+			message: 'The connection to the server was closed unexpectedly, perhaps it is offline.',
+			messages: ['socket hang up', 'socket hang up'],
+		});
+
+		expect(failure.networkCode).toBe('ECONNRESET');
+		expect(failure.network).toBe(true);
+		expect(failure.retryable).toBe(true);
+		expect(failure.status).toBeUndefined();
+	});
+
+	it('recognises a timeout and an unreachable host', () => {
+		expect(
+			classifyFailure({ httpCode: 'ETIMEDOUT', messages: ['timeout of 30000ms exceeded'] })
+				.networkCode,
+		).toBe('ETIMEDOUT');
+		expect(
+			classifyFailure({
+				httpCode: 'ENOTFOUND',
+				messages: ['getaddrinfo ENOTFOUND coolify.example.com'],
+			}).networkCode,
+		).toBe('ENOTFOUND');
+	});
+
+	it('does not mistake a numeric http code for a transport error', () => {
+		const failure = classifyFailure({ httpCode: '429', messages: ['Too many requests'] });
+
+		expect(failure.status).toBe(429);
+		expect(failure.networkCode).toBeUndefined();
+		expect(failure.network).toBe(false);
+	});
+
+	it('reads the response body from the error context of a wrapped error', () => {
+		const failure = classifyFailure({
+			httpCode: '409',
+			context: { data: { message: 'Domain already exists.' } },
+		});
+
+		expect(failure.status).toBe(409);
+		expect(failure.bodyMessage).toBe('Domain already exists.');
+	});
 });
 
 describe('policy constants', () => {

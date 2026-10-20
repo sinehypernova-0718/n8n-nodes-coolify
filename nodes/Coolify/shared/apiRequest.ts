@@ -11,6 +11,7 @@
  */
 
 import {
+	ExecutionBaseError,
 	NodeApiError,
 	sleep,
 	sleepWithAbort,
@@ -400,10 +401,11 @@ export async function coolifyApiRequest(
 			// resolution failure, or a problem with the credential itself.
 			failure = classifyFailure(error);
 			if (!failure.retryable) {
-				// Not a transient failure (for example a missing credential):
-				// surface it as a node error, unchanged when the runtime already
-				// produced one.
-				throw error instanceof NodeApiError
+				// Not a transient failure (for example a missing credential, a
+				// refused policy or a permanent status on a runtime that rejects
+				// failing statuses): keep the error of the n8n runtime, which
+				// carries the reason, and wrap only foreign errors.
+				throw error instanceof ExecutionBaseError
 					? error
 					: new NodeApiError(ctx.getNode(), error as JsonObject);
 			}
