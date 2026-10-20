@@ -1,19 +1,23 @@
 {
-	"name": "n8n-nodes-<...>",
+	"name": "@sinehypernova-0718/n8n-nodes-coolify",
 	"version": "0.1.0",
-	"description": "",
+	"packageManager": "pnpm@12.4.2",
+	"description": "An n8n community node for managing Coolify applications, deployments, databases, services, and infrastructure through workflows.",
 	"license": "MIT",
-	"homepage": "",
+	"homepage": "https://github.com/sinehypernova-0718/n8n-nodes-coolify#readme",
 	"keywords": [
 		"n8n-community-node-package"
 	],
 	"author": {
-		"name": "",
-		"email": ""
+		"name": "sinehypernova-0718",
+		"email": "srinjoy875@gmail.com"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/<...>/n8n-nodes-<...>.git"
+		"url": "https://github.com/sinehypernova-0718/n8n-nodes-coolify.git"
+	},
+	"bugs": {
+		"url": "https://github.com/sinehypernova-0718/n8n-nodes-coolify/issues"
 	},
 	"scripts": {
 		"build": "n8n-node build",
@@ -22,6 +26,7 @@
 		"lint": "n8n-node lint",
 		"lint:fix": "n8n-node lint --fix",
 		"release": "n8n-node release",
+		"release:local": "release-it",
 		"prepublishOnly": "n8n-node prerelease"
 	},
 	"files": [
@@ -31,17 +36,15 @@
 		"n8nNodesApiVersion": 1,
 		"strict": true,
 		"credentials": [
-			"dist/credentials/GithubIssuesApi.credentials.js",
-			"dist/credentials/GithubIssuesOAuth2Api.credentials.js"
+			"dist/credentials/CoolifyApi.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/GithubIssues/GithubIssues.node.js",
-			"dist/nodes/Example/Example.node.js"
+			"dist/nodes/Coolify/Coolify.node.js"
 		]
 	},
 	"devDependencies": {
 		"@n8n/node-cli": "*",
-		"eslint": "9.39.4",
+		"eslint": "9.29.0",
 		"prettier": "3.8.3",
 		"release-it": "20.2.0",
 		"typescript": "5.9.3"

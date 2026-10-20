@@ -1,0 +1,17 @@
+# Dependency build-script policy.
+#
+# None of the dependencies below need to run install scripts to lint, build, or
+# publish this community node package:
+#   - cpu-features / ssh2      optional native speed-ups for SSH transports
+#   - eslint-plugin-n8n-nodes-base  optional post-install hook of the linter
+#   - isolated-vm              native V8 sandbox used by n8n at runtime, not at build time
+#   - unrs-resolver           optional native resolver binaries
+#
+# Blocking them keeps installs reproducible and free of a native toolchain
+# requirement (node-gyp / python / Visual Studio build tools).
+allowBuilds:
+  cpu-features: false
+  eslint-plugin-n8n-nodes-base: false
+  isolated-vm: false
+  ssh2: false
+  unrs-resolver: false

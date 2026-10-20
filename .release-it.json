@@ -1,0 +1,24 @@
+{
+	"$schema": "https://unpkg.com/release-it/schema/release-it.json",
+	"git": {
+		"requireBranch": "master",
+		"requireCleanWorkingDir": true,
+		"requireUpstream": true,
+		"requireCommits": true,
+		"commit": true,
+		"tag": true,
+		"push": true,
+		"tagName": "v${version}",
+		"changelog": "npx auto-changelog --stdout --unreleased --commit-limit false -u --hide-credit"
+	},
+	"npm": {
+		"publish": false
+	},
+	"github": {
+		"release": true
+	},
+	"hooks": {
+		"beforeInit": "pnpm run lint && pnpm run build",
+		"afterBump": "npx auto-changelog -p"
+	}
+}

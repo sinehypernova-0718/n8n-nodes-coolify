@@ -1,262 +1,200 @@
-![Banner image](https://user-images.githubusercontent.com/10284570/173569848-c624317f-42b1-45a6-ab09-f0ea3c247648.png)
+# n8n-nodes-coolify
 
-# n8n-nodes-starter
+An n8n community node for [Coolify](https://coolify.io/) — the open-source self-hostable PaaS.
+It is designed to let you manage Coolify applications, services, databases, servers, and
+deployments from your n8n workflows.
 
-This starter repository helps you build custom integrations for [n8n](https://n8n.io). It includes example nodes, credentials, the node linter, and all the tooling you need to get started.
+[n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
-## Quick Start
+## Installation
 
-> [!TIP]
-> **New to building n8n nodes?** The fastest way to get started is with `npm create @n8n/node`. This command scaffolds a complete node package for you using the [@n8n/node-cli](https://www.npmjs.com/package/@n8n/node-cli).
+Install the package through your n8n instance using the community node installation interface.
 
-**To create a new node package from scratch:**
+1. Open your n8n instance.
+2. Navigate to **Settings → Community Nodes**.
+3. Select **Install**.
+4. Enter the package name `@sinehypernova-0718/n8n-nodes-coolify`.
+5. Review and accept the installation confirmation.
+6. Once the installation completes, open a workflow and search for the Coolify node.
 
-```bash
-npm create @n8n/node
-```
+For detailed instructions, see the
+[n8n community nodes installation guide](https://docs.n8n.io/integrations/community-nodes/installation/).
 
-**Already using this starter? Start developing with:**
+> **Note:** The package name entered during installation must match the name under which this project
+> is published to npm (`@sinehypernova-0718/n8n-nodes-coolify`). Community node installation
+> availability also depends on your n8n deployment configuration and administrator policies.
 
-```bash
-npm run dev
-```
+## Credentials
 
-This starts n8n with your nodes loaded and hot reload enabled.
+The Coolify node authenticates against the Coolify REST API with an API token, sent as a
+`Bearer` token in the `Authorization` header.
 
-## What's Included
+### Prerequisites
 
-This starter repository includes two example nodes to learn from:
+- A Coolify instance — either [Coolify Cloud](https://coolify.io/pricing) or your own
+  self-hosted installation.
+- An API token created in Coolify under **Keys & Tokens → API Tokens**, scoped to the team you
+  want to work with. The token carries the permissions selected at creation time
+  (`read`, `write`, `root`), so create the least privileged token that covers your workflow.
+- On self-hosted instances, API access must be enabled by an administrator, and the caller must
+  match the IP allowlist when one is configured.
 
-- **[Example Node](nodes/Example/)** - A simple starter node that shows the basic structure with a custom `execute` method
-- **[GitHub Issues Node](nodes/GithubIssues/)** - A complete, production-ready example built using the **declarative style**:
-  - **Low-code approach** - Define operations declaratively without writing request logic
-  - Multiple resources (Issues, Comments)
-  - Multiple operations (Get, Get All, Create)
-  - Two authentication methods (OAuth2 and Personal Access Token)
-  - List search functionality for dynamic dropdowns
-  - Proper error handling and typing
-  - Ideal for HTTP API-based integrations
+### Configure the credential
 
-> [!TIP]
-> The declarative/low-code style (used in GitHub Issues) is the recommended approach for building nodes that interact with HTTP APIs. It significantly reduces boilerplate code and handles requests automatically.
+| Setting | Value |
+|---|---|
+| Host | Base URL of the Coolify API, without a trailing slash. Use `https://app.coolify.io/api/v1` for Coolify Cloud, or the URL of your own instance (for example `https://coolify.example.com/api/v1`). |
+| Access Token | The API token created in Coolify. It is sent as `Authorization: Bearer <token>`. |
 
-Browse these examples to understand both approaches, then modify them or create your own.
+The credential test calls `GET /teams/current` against the configured host, so it verifies the
+token against the same instance your workflows will use.
 
-## Finding Inspiration
+Keep your token private. Never commit credentials to the repository or include tokens in issue
+reports, screenshots, or logs.
 
-Looking for more examples? Check out these resources:
+## Operations
 
-- **[npm Community Nodes](https://www.npmjs.com/search?q=keywords:n8n-community-node-package)** - Browse thousands of community-built nodes on npm using the `n8n-community-node-package` tag
-- **[n8n Built-in Nodes](https://github.com/n8n-io/n8n/tree/master/packages/nodes-base/nodes)** - Study the source code of n8n's official nodes for production-ready patterns and best practices
-- **[n8n Credentials](https://github.com/n8n-io/n8n/tree/master/packages/nodes-base/credentials)** - See how authentication is implemented for various services
+**Status: not implemented yet.** This repository currently ships the package scaffold, the
+credential, and the CI/publishing pipeline. The Coolify operations are the next piece of work and
+are tracked in the repository issues.
 
-These are excellent resources to understand how to structure your nodes, handle different API patterns, and implement advanced features.
+The operation set below is planned against the documented
+[Coolify API v1](https://coolify.io/docs/api/overview) and is listed so the intended scope is
+explicit. Nothing below is exposed in the node yet.
 
-## Prerequisites
+| Resource | Planned operation | Endpoint |
+|---|---|---|
+| Application | List | `GET /applications` |
+| Application | Get | `GET /applications/{uuid}` |
+| Application | Update | `PATCH /applications/{uuid}` |
+| Application | Delete | `DELETE /applications/{uuid}` |
+| Application | Start / Stop / Restart | `POST /applications/{uuid}/start`, `…/stop`, `…/restart` |
+| Application | List / Create / Update / Delete env | `GET|POST|PATCH|DELETE /applications/{uuid}/envs` |
+| Application | Logs | `GET /applications/{uuid}/logs` |
+| Service | List / Get | `GET /services`, `GET /services/{uuid}` |
+| Database | List / Get | `GET /databases`, `GET /databases/{uuid}` |
+| Server | List / Get | `GET /servers`, `GET /servers/{uuid}` |
+| Project | List / Get | `GET /projects`, `GET /projects/{uuid}` |
+| Deployment | List / Get | `GET /deployments`, `GET /deployments/{uuid}` |
+| Deployment | Deploy | `POST /deployments` (by application tag or UUID) |
+| Deployment | List by application | `GET /deployments/{applicationUuid}` |
+| Deployment | Cancel | `POST /deployments/{uuid}/cancel` |
+| Team | Get current | `GET /teams/current` |
+| System | Version / Healthcheck | `GET /version`, `GET /healthcheck` |
 
-Before you begin, install the following on your development machine:
+Until those operations land, the node renders a notice in the n8n editor instead of exposing
+GitHub Issues resources that the starter template shipped with.
 
-### Required
+## Compatibility
 
-- **[Node.js](https://nodejs.org/)** (v22 or higher) and npm
+This package is designed for n8n's community node ecosystem and uses the n8n node API.
+
+- **Integration type:** n8n community node.
+- **Implementation language:** TypeScript.
+- **API:** Coolify API v1.
+- **Authentication:** Coolify API token (Bearer).
+- **Package distribution:** npm — end users install the published package with the n8n
+  community nodes interface, and npm remains the registry the package is published to.
+- **Development package manager:** pnpm — the repository is developed, built, and published with
+  pnpm, pinned through the `packageManager` field in `package.json` and `pnpm-lock.yaml`.
+
+The package declares its n8n node metadata and entry points in `package.json`. Compatibility
+depends on the n8n version, the available `n8n-workflow` APIs, and the package's dependencies.
+
+The `0.1.x` releases are pre-1.0 releases. Operation coverage and compatibility may evolve as the
+integration develops.
+
+## Development
+
+### Requirements
+
+- **[Node.js](https://nodejs.org/)** (v22 or higher) and **pnpm**
   - Linux/Mac/WSL: Install via [nvm](https://github.com/nvm-sh/nvm)
   - Windows: Follow [Microsoft's NodeJS guide](https://learn.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-windows)
 - **[git](https://git-scm.com/downloads)**
+- **[Corepack](https://nodejs.org/api/corepack.html)** (optional) — pnpm 12.4.2 is pinned in
+  `package.json` via the `packageManager` field
 
-### Recommended
-
-- Follow n8n's [development environment setup guide](https://docs.n8n.io/integrations/creating-nodes/build/node-development-environment/)
+```bash
+corepack enable   # optional, if you do not have pnpm installed globally
+pnpm install
+```
 
 > [!NOTE]
-> The `@n8n/node-cli` is included as a dev dependency and will be installed automatically when you run `npm install`. The CLI includes n8n for local development, so you don't need to install n8n globally.
+> The `@n8n/node-cli` is included as a dev dependency and is installed automatically when you run
+> `pnpm install`. The CLI includes n8n for local development, so you do not need to install n8n
+> globally.
 
-## Getting Started with this Starter
+### Available scripts
 
-Follow these steps to create your own n8n community node package:
+| Script | Description |
+|---|---|
+| `pnpm run dev` | Start n8n with your node and watch for changes (runs `n8n-node dev`) |
+| `pnpm run build` | Compile TypeScript to JavaScript for production (runs `n8n-node build`) |
+| `pnpm run build:watch` | Build in watch mode (auto-rebuild on changes) |
+| `pnpm run lint` | Check your code for errors and style issues (runs `n8n-node lint`) |
+| `pnpm run lint:fix` | Automatically fix linting issues when possible (runs `n8n-node lint --fix`) |
+| `pnpm run release:local` | Create a release locally: bump the version, update the changelog, commit, tag (`vX.Y.Z`), and push — this triggers the publish workflow |
+| `pnpm run release` | The publish entry point used by the GitHub Actions publish workflow: lints, builds, and publishes to npm with provenance |
 
-### 1. Create Your Repository
+> **Note:** `pnpm run release` is what CI runs. Locally, use `pnpm run release:local` to create
+> the tag, because `@n8n/node-cli` pins release-it's branch check to `main` while this repository
+> develops on `master`. The repository configuration in `.release-it.json` handles the `master`
+> branch, the `vX.Y.Z` tag format, and the changelog generation.
 
-[Generate a new repository](https://github.com/n8n-io/n8n-nodes-starter/generate) from this template, then clone it:
+### Repository structure
 
-```bash
-git clone https://github.com/<your-organization>/<your-repo-name>.git
-cd <your-repo-name>
+```text
+n8n-nodes-coolify/
+├── credentials/
+│   └── CoolifyApi.credentials.ts   # Coolify API token credential (host + token)
+├── nodes/
+│   └── Coolify/
+│       ├── Coolify.node.ts         # The node itself
+│       └── Coolify.node.json       # n8n codex metadata (categories, documentation links)
+├── icons/
+│   └── coolify.svg                 # Node and credential icon
+├── .github/workflows/
+│   ├── ci.yml                      # Lint + build on pushes to master and on pull requests
+│   └── publish.yml                 # Publishes to npm on v*.*.* tags
+├── .release-it.json                # Local release configuration (branch, tag format, changelog)
+├── package.json                    # Package metadata and scripts
+├── pnpm-lock.yaml                  # Pinned dependency graph
+└── pnpm-workspace.yaml             # pnpm workspace + dependency build-script policy
 ```
 
-### 2. Install Dependencies
+## Release process
 
-```bash
-npm install
-```
+Releases are published by GitHub Actions, never from a local machine, so that every published
+version carries an npm provenance attestation (required by n8n for verified community nodes).
 
-This installs all required dependencies including the `@n8n/node-cli`.
+1. Make sure `master` is up to date and the working tree is clean.
+2. Run `pnpm run release:local`. It lints, builds, prompts for a version bump, updates
+   `CHANGELOG.md`, commits, creates a `vX.Y.Z` tag, and pushes it.
+3. The push of the tag triggers `.github/workflows/publish.yml`, which checks out the tag,
+   verifies that the tag matches `package.json`, checks that the version is not already on npm,
+   and publishes it to npm with provenance.
 
-### 3. Explore the Examples
+> **Note:** the release creates a GitHub release as well, which needs a `GITHUB_TOKEN` with
+> `repo` scope in your environment (for example `export GITHUB_TOKEN=$(gh auth token)`).
+> Without it, release-it falls back to opening the GitHub release page in the browser.
 
-Browse the example nodes in [nodes/](nodes/) and [credentials/](credentials/) to understand the structure:
+### Required repository configuration
 
-- Start with [nodes/Example/](nodes/Example/) for a basic node
-- Study [nodes/GithubIssues/](nodes/GithubIssues/) for a real-world implementation
-
-### 4. Build Your Node
-
-Edit the example nodes to fit your use case, or create new node files by copying the structure from [nodes/Example/](nodes/Example/).
-
-> [!TIP]
-> If you want to scaffold a completely new node package, use `npm create @n8n/node` to start fresh with the CLI's interactive generator.
-
-### 5. Configure Your Package
-
-Update `package.json` with your details:
-
-- `name` - Your package name (must start with `n8n-nodes-`)
-- `author` - Your name and email
-- `repository` - Your repository URL
-- `description` - What your node does
-
-Make sure your node is registered in the `n8n.nodes` array.
-
-### 6. Develop and Test Locally
-
-Start n8n with your node loaded:
-
-```bash
-npm run dev
-```
-
-This command runs `n8n-node dev` which:
-
-- Builds your node with watch mode
-- Starts n8n with your node available
-- Automatically rebuilds when you make changes
-- Opens n8n in your browser (usually http://localhost:5678)
-
-You can now test your node in n8n workflows!
-
-> [!NOTE]
-> Learn more about CLI commands in the [@n8n/node-cli documentation](https://www.npmjs.com/package/@n8n/node-cli).
-
-### 7. Lint Your Code
-
-Check for errors:
-
-```bash
-npm run lint
-```
-
-Auto-fix issues when possible:
-
-```bash
-npm run lint:fix
-```
-
-### 8. Build for Production
-
-When ready to publish:
-
-```bash
-npm run build
-```
-
-This compiles your TypeScript code to the `dist/` folder.
-
-### 9. Prepare for Publishing
-
-Before publishing:
-
-1. **Update documentation**: Replace this README with your node's documentation. Use [README_TEMPLATE.md](README_TEMPLATE.md) as a starting point.
-2. **Update the LICENSE**: Add your details to the [LICENSE](LICENSE.md) file.
-3. **Test thoroughly**: Ensure your node works in different scenarios.
-
-### 10. Publish to npm
-
-Publishing is handled automatically by the included GitHub Actions workflow ([.github/workflows/publish.yml](.github/workflows/publish.yml)). It runs on every version tag push and publishes to npm with a provenance attestation — a requirement for n8n community nodes starting May 1, 2026.
-
-#### One-time setup
-
-Configure npm to trust this repository's GitHub Actions workflow so it can publish on your behalf. Log in to [npmjs.com](https://npmjs.com), open your package settings, and under **Publish access → Trusted Publishers** add a publisher with:
-
-- **Repository owner**: your GitHub username or org
-- **Repository name**: your repo name
-- **Workflow name**: `publish.yml`
-
-No token or secret needs to be stored in GitHub — the workflow uses GitHub's OIDC token instead.
-
-> [!NOTE]
-> If you prefer a traditional npm token, create a Granular Access Token on npmjs.com and store it as `NPM_TOKEN` in your repository's Actions secrets. See the comments at the top of `.github/workflows/publish.yml` for details.
-
-#### Releasing a new version
-
-```bash
-npm run release
-```
-
-This lints, builds, prompts for a version bump, updates the changelog, commits, tags, and pushes — which triggers the workflow to publish to npm.
-
-### 11. Submit for Verification (Optional)
-
-Get your node verified for n8n Cloud:
-
-1. Ensure your node meets the [requirements](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/):
-   - Uses MIT license ✅ (included in this starter)
-   - No external package dependencies
-   - Follows n8n's design guidelines
-   - Passes quality and security review
-
-2. Submit through the [n8n Creator Portal](https://creators.n8n.io/nodes)
-
-**Benefits of verification:**
-
-- Available directly in n8n Cloud
-- Discoverable in the n8n nodes panel
-- Verified badge for quality assurance
-- Increased visibility in the n8n community
-
-## Available Scripts
-
-This starter includes several npm scripts to streamline development:
-
-| Script                | Description                                                                 |
-| --------------------- | --------------------------------------------------------------------------- |
-| `npm run dev`         | Start n8n with your node and watch for changes (runs `n8n-node dev`)        |
-| `npm run build`       | Compile TypeScript to JavaScript for production (runs `n8n-node build`)     |
-| `npm run build:watch` | Build in watch mode (auto-rebuild on changes)                               |
-| `npm run lint`        | Check your code for errors and style issues (runs `n8n-node lint`)          |
-| `npm run lint:fix`    | Automatically fix linting issues when possible (runs `n8n-node lint --fix`) |
-| `npm run release`     | Create a new release (runs `n8n-node release`)                              |
-
-> [!TIP]
-> These scripts use the [@n8n/node-cli](https://www.npmjs.com/package/@n8n/node-cli) under the hood. You can also run CLI commands directly, e.g., `npx n8n-node dev`.
-
-## Troubleshooting
-
-### My node doesn't appear in n8n
-
-1. Make sure you ran `npm install` to install dependencies
-2. Check that your node is listed in `package.json` under `n8n.nodes`
-3. Restart the dev server with `npm run dev`
-4. Check the console for any error messages
-
-### Linting errors
-
-Run `npm run lint:fix` to automatically fix most common issues. For remaining errors, check the [n8n node development guidelines](https://docs.n8n.io/integrations/creating-nodes/).
-
-### TypeScript errors
-
-Make sure you're using Node.js v22 or higher and have run `npm install` to get all type definitions.
+- A repository secret named `NPM_TOKEN` holding an npm granular access token with **read and
+  write** publish permission for `@sinehypernova-0718/n8n-nodes-coolify`.
+  Alternatively, configure [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers)
+  for this repository and the `publish.yml` workflow, and leave `NPM_TOKEN` unset.
+- The default branch must be `master`; CI and the publish workflow are configured for it.
+- On self-hosted Coolify instances, an administrator must enable API access for the token's team.
 
 ## Resources
 
-- **[n8n Node Documentation](https://docs.n8n.io/integrations/creating-nodes/)** - Complete guide to building nodes
-- **[n8n Community Forum](https://community.n8n.io/)** - Get help and share your nodes
-- **[@n8n/node-cli Documentation](https://www.npmjs.com/package/@n8n/node-cli)** - CLI tool reference
-- **[n8n Creator Portal](https://creators.n8n.io/nodes)** - Submit your node for verification
-- **[Submit Community Nodes Guide](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/)** - Verification requirements and process
-
-## Contributing
-
-Have suggestions for improving this starter? [Open an issue](https://github.com/n8n-io/n8n-nodes-starter/issues) or submit a pull request!
+- [n8n community nodes documentation](https://docs.n8n.io/integrations/#community-nodes)
+- [Coolify API documentation](https://coolify.io/docs/api/overview)
+- [Coolify API authorization](https://coolify.io/docs/api/authorization)
+- [Coolify API tokens](https://coolify.io/docs/core/security/credentials/api-tokens)
 
 ## License
 
-[MIT](https://github.com/n8n-io/n8n-nodes-starter/blob/master/LICENSE.md)
+[MIT](LICENSE.md)
