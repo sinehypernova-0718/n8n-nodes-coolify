@@ -43,10 +43,10 @@ The Coolify node authenticates against the Coolify REST API with an API token, s
 
 ### Configure the credential
 
-| Setting | Value |
-|---|---|
-| Base URL | Base URL of the Coolify API, including the `/api/v1` path. Use `https://app.coolify.io/api/v1` for Coolify Cloud, or the URL of your own instance (for example `https://coolify.example.com/api/v1`). A trailing slash is tolerated; the `/api/v1` suffix is required. |
-| Access Token | The API token created in Coolify. It is sent as `Authorization: Bearer <token>`. |
+| Setting      | Value                                                                                                                                                                                                                                                                  |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Base URL     | Base URL of the Coolify API, including the `/api/v1` path. Use `https://app.coolify.io/api/v1` for Coolify Cloud, or the URL of your own instance (for example `https://coolify.example.com/api/v1`). A trailing slash is tolerated; the `/api/v1` suffix is required. |
+| Access Token | The API token created in Coolify. It is sent as `Authorization: Bearer <token>`.                                                                                                                                                                                       |
 
 The credential test calls `GET /team` against the configured base URL — the endpoint that
 returns the team bound to the token — so it verifies the token against the same instance your
@@ -162,17 +162,17 @@ pnpm install
 
 ### Available scripts
 
-| Script | Description |
-|---|---|
-| `pnpm run dev` | Start n8n with your node and watch for changes (runs `n8n-node dev`) |
-| `pnpm run build` | Compile TypeScript to JavaScript for production (runs `n8n-node build`) |
-| `pnpm run build:watch` | Build in watch mode (auto-rebuild on changes) |
-| `pnpm run lint` | Check your code for errors and style issues (runs `n8n-node lint`) |
-| `pnpm run test` | Run the unit tests (runs `vitest run`) |
-| `pnpm run test:watch` | Run the unit tests in watch mode (runs `vitest`) |
-| `pnpm run lint:fix` | Automatically fix linting issues when possible (runs `n8n-node lint --fix`) |
+| Script                   | Description                                                                                                                             |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm run dev`           | Start n8n with your node and watch for changes (runs `n8n-node dev`)                                                                    |
+| `pnpm run build`         | Compile TypeScript to JavaScript for production (runs `n8n-node build`)                                                                 |
+| `pnpm run build:watch`   | Build in watch mode (auto-rebuild on changes)                                                                                           |
+| `pnpm run lint`          | Check your code for errors and style issues (runs `n8n-node lint`)                                                                      |
+| `pnpm run test`          | Run the unit tests (runs `vitest run`)                                                                                                  |
+| `pnpm run test:watch`    | Run the unit tests in watch mode (runs `vitest`)                                                                                        |
+| `pnpm run lint:fix`      | Automatically fix linting issues when possible (runs `n8n-node lint --fix`)                                                             |
 | `pnpm run release:local` | Create a release locally: bump the version, update the changelog, commit, tag (`vX.Y.Z`), and push — this triggers the publish workflow |
-| `pnpm run release` | The publish entry point used by the GitHub Actions publish workflow: lints, builds, and publishes to npm with provenance |
+| `pnpm run release`       | The publish entry point used by the GitHub Actions publish workflow: lints, builds, and publishes to npm with provenance                |
 
 > **Note:** `pnpm run release` is what CI runs. Locally, use `pnpm run release:local` to create
 > the tag, because `@n8n/node-cli` pins release-it's branch check to `main` while this repository
