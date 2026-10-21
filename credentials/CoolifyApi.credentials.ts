@@ -74,7 +74,7 @@ export class CoolifyApi implements ICredentialType {
 				properties: {
 					value: 401,
 					message:
-						'Coolify rejected the token (HTTP 401). It is missing, invalid, expired, revoked, or its owner is no longer a member of the token\'s team.',
+						"Coolify rejected the token (HTTP 401). It is missing, invalid, expired, revoked, or its owner is no longer a member of the token's team.",
 				},
 			},
 			{
