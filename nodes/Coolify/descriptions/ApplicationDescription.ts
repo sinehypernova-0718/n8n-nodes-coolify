@@ -1,6 +1,7 @@
 import type { INodeProperties } from 'n8n-workflow';
 
 import { applicationCreateDescription } from './applicationCreateFields';
+import { applicationUpdateDescription } from './applicationUpdateFields';
 
 /**
  * Description of the Coolify application resource.
@@ -26,6 +27,12 @@ export const applicationFields: INodeProperties[] = [
 				value: 'addDestination',
 				description: 'Attach an additional destination to an application',
 				action: 'Add a destination',
+			},
+			{
+				name: 'Clone',
+				value: 'clone',
+				description: 'Clone an application to another destination of the team',
+				action: 'Clone an application',
 			},
 			{
 				name: 'Create (Docker Image Without Git)',
@@ -190,6 +197,20 @@ export const applicationFields: INodeProperties[] = [
 				action: 'List tags',
 			},
 			{
+				name: 'Migrate',
+				value: 'migrate',
+				description:
+					'Migrate an application to another destination. The application is stopped and has to be deployed again after the migration.',
+				action: 'Migrate an application',
+			},
+			{
+				name: 'Move',
+				value: 'move',
+				description:
+					'Move an application to another environment. The running containers are not affected.',
+				action: 'Move an application',
+			},
+			{
 				name: 'Remove Destination',
 				value: 'removeDestination',
 				description: 'Detach a destination from an application',
@@ -200,6 +221,12 @@ export const applicationFields: INodeProperties[] = [
 				value: 'restart',
 				description: 'Restart an application by UUID',
 				action: 'Restart an application',
+			},
+			{
+				name: 'Rollback',
+				value: 'rollback',
+				description: 'Queue a rollback deployment of an application to a previous image',
+				action: 'Roll back an application',
 			},
 			{
 				name: 'Run Storage Backup',
@@ -224,6 +251,13 @@ export const applicationFields: INodeProperties[] = [
 				value: 'stop',
 				description: 'Stop an application by UUID',
 				action: 'Stop an application',
+			},
+			{
+				name: 'Update',
+				value: 'update',
+				description:
+					'Update the settings of an application. Only the settings that are filled in are changed.',
+				action: 'Update an application',
 			},
 			{
 				name: 'Update Env',
@@ -2257,6 +2291,242 @@ export const applicationFields: INodeProperties[] = [
 		description:
 			'Name of the Docker Compose service the log is read from. The API answers 404 when no running container matches the name.',
 	},
+
+	// ----------------------------------
+	//        application:clone
+	// ----------------------------------
+	{
+		displayName: 'Application UUID',
+		name: 'applicationUuid',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['clone'],
+			},
+		},
+		description: 'UUID of the application to clone',
+	},
+	{
+		displayName: 'Destination UUID',
+		name: 'destinationUuid',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['clone'],
+			},
+		},
+		description: 'UUID of the destination the application is cloned into',
+	},
+	{
+		displayName: 'Name',
+		name: 'name',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['clone'],
+			},
+		},
+		description:
+			'Name of the cloned application. The API keeps the name of the source application when it is left empty.',
+	},
+	{
+		displayName: 'Clone Volumes',
+		name: 'cloneVolumes',
+		type: 'boolean',
+		default: false,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['clone'],
+			},
+		},
+		description: 'Whether the data of the volumes is copied to the cloned application',
+	},
+
+	// ----------------------------------
+	//       application:migrate
+	// ----------------------------------
+	{
+		displayName: 'Notice',
+		name: 'migrateNotice',
+		type: 'notice',
+		typeOptions: {
+			width: 400,
+		},
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['migrate'],
+			},
+		},
+		description:
+			'The migration stops the application and only transfers the volumes when both servers are managed by Coolify. The API only offers the endpoint on a development instance of Coolify.',
+	},
+	{
+		displayName: 'Application UUID',
+		name: 'applicationUuid',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['migrate'],
+			},
+		},
+		description: 'UUID of the application to migrate',
+	},
+	{
+		displayName: 'Destination UUID',
+		name: 'destinationUuid',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['migrate'],
+			},
+		},
+		description: 'UUID of the destination the application is migrated to',
+	},
+	{
+		displayName: 'Migrate Volumes',
+		name: 'migrateVolumes',
+		type: 'boolean',
+		default: true,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['migrate'],
+			},
+		},
+		description:
+			'Whether the data of the volumes is transferred to the destination. It only works when both servers are managed by Coolify.',
+	},
+
+	// ----------------------------------
+	//         application:move
+	// ----------------------------------
+	{
+		displayName: 'Application UUID',
+		name: 'applicationUuid',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['move'],
+			},
+		},
+		description: 'UUID of the application to move',
+	},
+	{
+		displayName: 'Environment UUID',
+		name: 'environmentUuid',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['move'],
+			},
+		},
+		description: 'UUID of the environment the application is moved to',
+	},
+
+	// ----------------------------------
+	//       application:rollback
+	// ----------------------------------
+	{
+		displayName: 'Application UUID',
+		name: 'applicationUuid',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['rollback'],
+			},
+		},
+		description: 'UUID of the application to roll back',
+	},
+	{
+		displayName: 'Commit',
+		name: 'commit',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['rollback'],
+			},
+		},
+		description: 'Image tag or commit the application is rolled back to',
+	},
+
+	// ----------------------------------
+	//        application:update
+	// ----------------------------------
+	{
+		displayName: 'Notice',
+		name: 'updateNotice',
+		type: 'notice',
+		typeOptions: {
+			width: 400,
+		},
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['update'],
+			},
+		},
+		description:
+			'The update only changes the settings that are filled in. The domains are replaced by the given list, and a Docker Compose application needs its domains per service instead.',
+	},
+	{
+		displayName: 'Application UUID',
+		name: 'applicationUuid',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['update'],
+			},
+		},
+		description: 'UUID of the application to update',
+	},
+	{
+		displayName: 'Remove Domains',
+		name: 'removeDomains',
+		type: 'boolean',
+		default: false,
+		displayOptions: {
+			show: {
+				resource: ['application'],
+				operation: ['update'],
+			},
+		},
+		description:
+			'Whether the current domains of the application are removed. The API only removes them when the server runs a proxy.',
+	},
+	...applicationUpdateDescription(),
 
 	// ----------------------------------
 	//   application:create (all variants)
