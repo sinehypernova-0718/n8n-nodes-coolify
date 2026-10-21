@@ -1,4 +1,45 @@
-import { NodeConnectionTypes, type INodeType, type INodeTypeDescription } from 'n8n-workflow';
+import {
+	NodeApiError,
+	NodeConnectionTypes,
+	NodeOperationError,
+	type IDataObject,
+	type IExecuteFunctions,
+	type INode,
+	type INodeExecutionData,
+	type INodeType,
+	type INodeTypeDescription,
+} from 'n8n-workflow';
+
+import { applicationFields } from './descriptions';
+import { applicationRequestBuilders } from './requests';
+import { coolifyApiRequest } from './shared/apiRequest';
+
+/**
+ * Map an error of the execution to an n8n node error.
+ *
+ * The shared transport already reports a failed Coolify request as a
+ * `NodeApiError` and the request builders report a rejected parameter as a
+ * `NodeOperationError`. Both are passed through unchanged, so the status
+ * code, the Coolify message and the response body of a failed request stay
+ * visible in the editor. Anything else is wrapped, so the editor never shows
+ * a bare error.
+ *
+ * @param node The node that failed.
+ * @param error The error that was caught.
+ * @param itemIndex Index of the input item that failed.
+ * @returns The error to report to the n8n runtime.
+ */
+function asNodeError(
+	node: INode,
+	error: unknown,
+	itemIndex: number,
+): NodeApiError | NodeOperationError {
+	if (error instanceof NodeApiError || error instanceof NodeOperationError) {
+		return error;
+	}
+
+	return new NodeOperationError(node, error as Error, { itemIndex });
+}
 
 export class Coolify implements INodeType {
 	description: INodeTypeDescription = {
@@ -10,7 +51,7 @@ export class Coolify implements INodeType {
 		icon: { light: 'file:../../icons/coolify.svg', dark: 'file:../../icons/coolify.svg' },
 		group: ['input'],
 		version: 1,
-		subtitle: 'Coolify',
+		subtitle: '={{$parameter["operation"]}}',
 		description:
 			'Manage Coolify applications, services, databases, servers and deployments from your n8n workflows.',
 		defaults: {
@@ -27,16 +68,71 @@ export class Coolify implements INodeType {
 		],
 		properties: [
 			{
-				displayName: 'Notice',
-				name: 'notice',
-				type: 'notice',
-				typeOptions: {
-					width: 400,
-				},
-				default: '',
-				description:
-					'This node is a bootstrap: the Coolify API operations are not implemented yet. See the repository README for the planned operation list.',
+				displayName: 'Resource',
+				name: 'resource',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'Application',
+						value: 'application',
+						description: 'Manage the applications of a Coolify team',
+					},
+				],
+				default: 'application',
 			},
+			...applicationFields,
 		],
 	};
+
+	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+		const items = this.getInputData();
+		const returnData: INodeExecutionData[] = [];
+
+		for (let i = 0; i < items.length; i++) {
+			try {
+				const operation = this.getNodeParameter('operation', i) as string;
+
+				const buildRequest = applicationRequestBuilders[operation];
+				if (!buildRequest) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`The Application operation "${operation}" is not implemented yet`,
+						{ itemIndex: i },
+					);
+				}
+
+				const request = await buildRequest.call(this, i);
+
+				const response = await coolifyApiRequest(this, request.method, request.path, {
+					qs: request.qs,
+					body: request.body,
+					retrySafety: request.retrySafety,
+				});
+
+				const responseData = (Array.isArray(response) ? response : [response]).filter(
+					(entry): entry is IDataObject => typeof entry === 'object' && entry !== null,
+				);
+
+				returnData.push(
+					...this.helpers.constructExecutionMetaData(this.helpers.returnJsonArray(responseData), {
+						itemData: { item: i },
+					}),
+				);
+			} catch (error) {
+				if (this.continueOnFail()) {
+					returnData.push(
+						...this.helpers.constructExecutionMetaData(
+							this.helpers.returnJsonArray({ error: (error as Error).message }),
+							{ itemData: { item: i } },
+						),
+					);
+					continue;
+				}
+				throw asNodeError(this.getNode(), error, i);
+			}
+		}
+
+		return [returnData];
+	}
 }

@@ -1,0 +1,1 @@
+export { applicationFields } from './ApplicationDescription';
