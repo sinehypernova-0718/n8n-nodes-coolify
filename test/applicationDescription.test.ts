@@ -3,6 +3,8 @@ import type { INodeProperties } from 'n8n-workflow';
 
 import { Coolify } from '../nodes/Coolify/Coolify.node';
 import { applicationRequestBuilders } from '../nodes/Coolify/requests';
+import { applicationFieldUiName } from '../nodes/Coolify/requests/application/applicationFields';
+import { applicationUpdateFieldSpecs } from '../nodes/Coolify/requests/application/applicationUpdateFields';
 
 const properties = new Coolify().description.properties;
 
@@ -34,6 +36,7 @@ describe('Coolify node description', () => {
 	it('offers exactly the implemented application operations', () => {
 		expect([...operationValues()].sort()).toEqual([
 			'addDestination',
+			'clone',
 			'createDockerImage',
 			'createDockerfile',
 			'createEnv',
@@ -60,12 +63,16 @@ describe('Coolify node description', () => {
 			'listRollbackImages',
 			'listStorages',
 			'listTags',
+			'migrate',
+			'move',
 			'removeDestination',
 			'restart',
+			'rollback',
 			'runStorageBackup',
 			'setStorageBackupSchedule',
 			'start',
 			'stop',
+			'update',
 			'updateEnv',
 			'updateEnvsBulk',
 			'updatePreviewDomains',
@@ -162,6 +169,48 @@ describe('Coolify node description', () => {
 			expect(shown).toContain('serverUuid');
 			expect(shown).toContain('environmentName');
 			expect(shown).toContain('environmentUuid');
+		}
+	});
+
+	it('shows exactly the fields of the update contract for the update operation', () => {
+		const contract = applicationUpdateFieldSpecs()
+			.map((spec) => applicationFieldUiName(spec.apiName))
+			.sort();
+
+		const shown = properties
+			.filter((parameter) =>
+				(parameter.displayOptions?.show?.operation as string[] | undefined)?.includes('update'),
+			)
+			.flatMap((parameter) =>
+				parameter.type === 'collection'
+					? (parameter.options ?? []).map((item) => item.name)
+					: [parameter.name],
+			)
+			.filter((name) => !['applicationUuid', 'removeDomains', 'updateNotice'].includes(name))
+			.sort();
+
+		expect(shown).toEqual(contract);
+	});
+
+	it('offers the fields the update endpoint of the Coolify API publishes', () => {
+		const names = applicationUpdateFieldSpecs().map((spec) => spec.apiName);
+
+		expect(names).toHaveLength(89);
+		expect(new Set(names).size).toBe(names.length);
+	});
+
+	it('does not offer the fields the update endpoint of the Coolify API rejects', () => {
+		const names = applicationUpdateFieldSpecs().map((spec) => spec.apiName);
+
+		for (const rejected of [
+			'project_uuid',
+			'server_uuid',
+			'environment_name',
+			'github_app_uuid',
+			'destination_uuid',
+			'dockerfile',
+		]) {
+			expect(names).not.toContain(rejected);
 		}
 	});
 });

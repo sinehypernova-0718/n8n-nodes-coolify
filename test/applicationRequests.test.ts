@@ -3,6 +3,7 @@ import { type IExecuteFunctions, type INode, NodeOperationError } from 'n8n-work
 
 import {
 	addDestinationRequest,
+	cloneApplicationRequest,
 	createDockerfileApplicationRequest,
 	createDockerImageApplicationRequest,
 	createEnvRequest,
@@ -29,12 +30,16 @@ import {
 	listRollbackImagesRequest,
 	listStoragesRequest,
 	listTagsRequest,
+	migrateApplicationRequest,
+	moveApplicationRequest,
 	removeDestinationRequest,
 	restartApplicationRequest,
+	rollbackApplicationRequest,
 	runStorageBackupRequest,
 	setStorageBackupScheduleRequest,
 	startApplicationRequest,
 	stopApplicationRequest,
+	updateApplicationRequest,
 	updateEnvsBulkRequest,
 	updateEnvRequest,
 	updatePreviewDomainsRequest,
@@ -1842,6 +1847,404 @@ describe('application request builders', () => {
 		it('fails when the application uuid is missing', async () => {
 			await expect(
 				getPreviewLogsRequest.call(createContext({ pullRequestId: 42 }), 0),
+			).rejects.toThrowError(NodeOperationError);
+		});
+	});
+
+	describe('update', () => {
+		it('requests the update of the application by its uuid', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123', name: 'my-app' }),
+				0,
+			);
+
+			expect(request.method).toBe('PATCH');
+			expect(request.path).toBe('applications/abc-123');
+			expect(request.body).toEqual({ name: 'my-app' });
+		});
+
+		it('fails when the application uuid is missing', async () => {
+			await expect(
+				updateApplicationRequest.call(createContext({ name: 'my-app' }), 0),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('fails when no setting is filled in', async () => {
+			await expect(
+				updateApplicationRequest.call(createContext({ applicationUuid: 'abc-123' }), 0),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('sends a boolean setting that is switched on', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					updateDeploymentSettings: { isForceHttpsEnabled: 'enabled' },
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({ is_force_https_enabled: true });
+		});
+
+		it('sends a boolean setting that is switched off', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					updateDeploymentSettings: { isForceHttpsEnabled: 'disabled' },
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({ is_force_https_enabled: false });
+		});
+
+		it('keeps a boolean setting that is unchanged', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					name: 'my-app',
+					updateDeploymentSettings: { isForceHttpsEnabled: 'unchanged' },
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({ name: 'my-app' });
+		});
+
+		it('sends a number setting as a number', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					updateDeploymentSettings: { stopGracePeriod: '45' },
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({ stop_grace_period: 45 });
+		});
+
+		it('fails when a number setting is not a number', async () => {
+			await expect(
+				updateApplicationRequest.call(
+					createContext({
+						applicationUuid: 'abc-123',
+						updateDeploymentSettings: { stopGracePeriod: 'soon' },
+					}),
+					0,
+				),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('keeps the settings of the collections the user did not touch', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123', description: 'my app' }),
+				0,
+			);
+
+			expect(request.body).toEqual({ description: 'my app' });
+		});
+
+		it('sends the text settings that are filled in', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					gitRepository: 'https://github.com/example/example.git',
+					gitBranch: 'main',
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({
+				git_repository: 'https://github.com/example/example.git',
+				git_branch: 'main',
+			});
+		});
+
+		it('keeps an enumeration that is unchanged', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					name: 'my-app',
+					buildPack: 'unchanged',
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({ name: 'my-app' });
+		});
+
+		it('sends an enumeration that is changed', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123', buildPack: 'dockerfile' }),
+				0,
+			);
+
+			expect(request.body).toEqual({ build_pack: 'dockerfile' });
+		});
+
+		it('encodes the custom labels as base64', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					updateDockerSettings: { customLabels: 'traefik.enable=true' },
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({
+				custom_labels: Buffer.from('traefik.enable=true', 'utf8').toString('base64'),
+			});
+		});
+
+		it('sends the domains that are entered', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123', domains: 'https://example.com' }),
+				0,
+			);
+
+			expect(request.body).toEqual({ domains: 'https://example.com' });
+		});
+
+		it('removes the domains when the switch is on', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123', removeDomains: true }),
+				0,
+			);
+
+			expect(request.body).toEqual({ domains: '' });
+		});
+
+		it('fails when the exposed ports are not a list of ports', async () => {
+			await expect(
+				updateApplicationRequest.call(
+					createContext({ applicationUuid: 'abc-123', portsExposes: '80,https' }),
+					0,
+				),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('fails when the commit sha holds forbidden characters', async () => {
+			await expect(
+				updateApplicationRequest.call(
+					createContext({ applicationUuid: 'abc-123', gitCommitSha: 'abc def' }),
+					0,
+				),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('keeps the Docker Compose domains when no service domain was added', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					name: 'my-app',
+					updateGitBuildSettings: { dockerComposeDomains: [] },
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({ name: 'my-app' });
+		});
+
+		it('sends the Docker Compose domains of the services that were added', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					updateGitBuildSettings: {
+						dockerComposeDomains: [{ name: 'app', domain: 'https://example.com' }],
+					},
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({
+				docker_compose_domains: [{ name: 'app', domain: 'https://example.com' }],
+			});
+		});
+
+		it('fails when a Docker Compose domain has no service name', async () => {
+			await expect(
+				updateApplicationRequest.call(
+					createContext({
+						applicationUuid: 'abc-123',
+						updateGitBuildSettings: {
+							dockerComposeDomains: [{ name: '', domain: 'https://example.com' }],
+						},
+					}),
+					0,
+				),
+			).rejects.toThrowError(NodeOperationError);
+		});
+	});
+
+	describe('clone', () => {
+		it('requests the clone of the application into the destination', async () => {
+			const request = await cloneApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123', destinationUuid: 'dest-456' }),
+				0,
+			);
+
+			expect(request.method).toBe('POST');
+			expect(request.path).toBe('applications/abc-123/clone');
+			expect(request.body).toEqual({ destination_uuid: 'dest-456' });
+		});
+
+		it('fails when the application uuid is missing', async () => {
+			await expect(
+				cloneApplicationRequest.call(createContext({ destinationUuid: 'dest-456' }), 0),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('fails when the destination uuid is missing', async () => {
+			await expect(
+				cloneApplicationRequest.call(createContext({ applicationUuid: 'abc-123' }), 0),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('sends the name of the clone when it is entered', async () => {
+			const request = await cloneApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					destinationUuid: 'dest-456',
+					name: 'my-clone',
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({ destination_uuid: 'dest-456', name: 'my-clone' });
+		});
+
+		it('keeps the name of the clone when it is empty', async () => {
+			const request = await cloneApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123', destinationUuid: 'dest-456', name: '' }),
+				0,
+			);
+
+			expect(request.body).toEqual({ destination_uuid: 'dest-456' });
+		});
+
+		it('sends the volumes only when they are cloned', async () => {
+			const request = await cloneApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					destinationUuid: 'dest-456',
+					cloneVolumes: true,
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({ destination_uuid: 'dest-456', clone_volumes: true });
+		});
+	});
+
+	describe('rollback', () => {
+		it('requests the rollback of the application to the commit', async () => {
+			const request = await rollbackApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123', commit: 'v1.2.3' }),
+				0,
+			);
+
+			expect(request.method).toBe('POST');
+			expect(request.path).toBe('applications/abc-123/rollback');
+			expect(request.body).toEqual({ commit: 'v1.2.3' });
+		});
+
+		it('fails when the application uuid is missing', async () => {
+			await expect(
+				rollbackApplicationRequest.call(createContext({ commit: 'v1.2.3' }), 0),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('fails when the commit is missing', async () => {
+			await expect(
+				rollbackApplicationRequest.call(createContext({ applicationUuid: 'abc-123' }), 0),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('fails when the commit holds forbidden characters', async () => {
+			await expect(
+				rollbackApplicationRequest.call(
+					createContext({ applicationUuid: 'abc-123', commit: 'v1 2 3' }),
+					0,
+				),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('accepts the HEAD reference', async () => {
+			const request = await rollbackApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123', commit: 'HEAD' }),
+				0,
+			);
+
+			expect(request.body).toEqual({ commit: 'HEAD' });
+		});
+	});
+
+	describe('migrate', () => {
+		it('requests the migration of the application into the destination', async () => {
+			const request = await migrateApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123', destinationUuid: 'dest-456' }),
+				0,
+			);
+
+			expect(request.method).toBe('POST');
+			expect(request.path).toBe('applications/abc-123/migrate');
+			expect(request.body).toEqual({
+				destination_uuid: 'dest-456',
+				migrate_volumes: true,
+			});
+		});
+
+		it('fails when the application uuid is missing', async () => {
+			await expect(
+				migrateApplicationRequest.call(createContext({ destinationUuid: 'dest-456' }), 0),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('fails when the destination uuid is missing', async () => {
+			await expect(
+				migrateApplicationRequest.call(createContext({ applicationUuid: 'abc-123' }), 0),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('sends the transfer of the volumes when it is switched off', async () => {
+			const request = await migrateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					destinationUuid: 'dest-456',
+					migrateVolumes: false,
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({
+				destination_uuid: 'dest-456',
+				migrate_volumes: false,
+			});
+		});
+	});
+
+	describe('move', () => {
+		it('requests the move of the application into the environment', async () => {
+			const request = await moveApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123', environmentUuid: 'env-789' }),
+				0,
+			);
+
+			expect(request.method).toBe('POST');
+			expect(request.path).toBe('applications/abc-123/move');
+			expect(request.body).toEqual({ environment_uuid: 'env-789' });
+		});
+
+		it('fails when the application uuid is missing', async () => {
+			await expect(
+				moveApplicationRequest.call(createContext({ environmentUuid: 'env-789' }), 0),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('fails when the environment uuid is missing', async () => {
+			await expect(
+				moveApplicationRequest.call(createContext({ applicationUuid: 'abc-123' }), 0),
 			).rejects.toThrowError(NodeOperationError);
 		});
 	});
