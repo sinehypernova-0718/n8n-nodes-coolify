@@ -44,6 +44,7 @@ import {
 	updateEnvRequest,
 	updatePreviewDomainsRequest,
 	updateStorageRequest,
+	type CoolifyRequest,
 } from '../nodes/Coolify/requests';
 
 const node = {
@@ -1630,6 +1631,100 @@ describe('application request builders', () => {
 				createPublicApplicationRequest.call(createContext({ ...base, tags: ['a'] }), 0),
 			).rejects.toThrowError(NodeOperationError);
 		});
+
+		it('encodes the custom labels as base64', async () => {
+			const request = await createPublicApplicationRequest.call(
+				createContext({ ...base, dockerSettings: { customLabels: 'traefik.enable=true' } }),
+				0,
+			);
+
+			expect(request.body?.custom_labels).toBe(
+				Buffer.from('traefik.enable=true', 'utf8').toString('base64'),
+			);
+		});
+
+		it('does not send the custom labels when they are empty', async () => {
+			const request = await createPublicApplicationRequest.call(
+				createContext({ ...base, dockerSettings: { customLabels: '' } }),
+				0,
+			);
+
+			expect(request.body).not.toHaveProperty('custom_labels');
+		});
+	});
+
+	describe('custom labels', () => {
+		const identity = {
+			projectUuid: 'project-1',
+			serverUuid: 'server-1',
+			environmentName: 'production',
+		};
+		const labels = 'traefik.enable=true';
+		const encoded = Buffer.from(labels, 'utf8').toString('base64');
+
+		const variants: {
+			name: string;
+			builder: (this: IExecuteFunctions, itemIndex: number) => Promise<CoolifyRequest>;
+			parameters: Record<string, unknown>;
+		}[] = [
+			{
+				name: 'createPublic',
+				builder: createPublicApplicationRequest,
+				parameters: {
+					gitRepository: 'https://github.com/acme/app',
+					gitBranch: 'main',
+					buildPack: 'nixpacks',
+				},
+			},
+			{
+				name: 'createPrivateGithubApp',
+				builder: createPrivateGithubAppApplicationRequest,
+				parameters: {
+					gitRepository: 'https://github.com/acme/app',
+					gitBranch: 'main',
+					buildPack: 'nixpacks',
+					githubAppUuid: 'gh-1',
+				},
+			},
+			{
+				name: 'createPrivateDeployKey',
+				builder: createPrivateDeployKeyApplicationRequest,
+				parameters: {
+					gitRepository: 'https://github.com/acme/app',
+					gitBranch: 'main',
+					buildPack: 'nixpacks',
+					privateKeyUuid: 'key-1',
+				},
+			},
+			{
+				name: 'createDockerfile',
+				builder: createDockerfileApplicationRequest,
+				parameters: { dockerfile: 'FROM alpine' },
+			},
+			{
+				name: 'createDockerImage',
+				builder: createDockerImageApplicationRequest,
+				parameters: { dockerRegistryImageName: 'acme/app' },
+			},
+		];
+
+		for (const variant of variants) {
+			it(`encodes the custom labels of a ${variant.name} request exactly once`, async () => {
+				const request = await variant.builder.call(
+					createContext({
+						...identity,
+						...variant.parameters,
+						dockerSettings: { customLabels: labels },
+					}),
+					0,
+				);
+
+				expect(request.body?.custom_labels).toBe(encoded);
+				expect(request.body?.custom_labels).not.toBe(
+					Buffer.from(encoded, 'utf8').toString('base64'),
+				);
+			});
+		}
 	});
 
 	describe('createPrivateGithubApp', () => {
@@ -1992,9 +2087,37 @@ describe('application request builders', () => {
 				0,
 			);
 
-			expect(request.body).toEqual({
-				custom_labels: Buffer.from('traefik.enable=true', 'utf8').toString('base64'),
-			});
+			expect(request.body?.custom_labels).toBe(
+				Buffer.from('traefik.enable=true', 'utf8').toString('base64'),
+			);
+		});
+
+		it('encodes the custom labels exactly once', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					updateDockerSettings: { customLabels: 'traefik.enable=true' },
+				}),
+				0,
+			);
+
+			const encoded = Buffer.from('traefik.enable=true', 'utf8').toString('base64');
+
+			expect(request.body?.custom_labels).toBe(encoded);
+			expect(request.body?.custom_labels).not.toBe(Buffer.from(encoded, 'utf8').toString('base64'));
+		});
+
+		it('does not send the custom labels when they are empty', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					name: 'my-app',
+					updateDockerSettings: { customLabels: '' },
+				}),
+				0,
+			);
+
+			expect(request.body).not.toHaveProperty('custom_labels');
 		});
 
 		it('sends the domains that are entered', async () => {

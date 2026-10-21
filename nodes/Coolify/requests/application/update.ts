@@ -15,8 +15,9 @@ import { requireApplicationUuid } from './parameters';
  * is. The node therefore only sends the settings the user changed, and it
  * refuses to send a request that would not change anything.
  *
- * The custom labels are the one field the API expects base64 encoded, so the
- * node encodes them.
+ * The custom labels are the one field the API expects base64 encoded. The
+ * field contract of the update encodes them, so the body carries the encoded
+ * labels exactly once.
  *
  * @param this The execution context of the node.
  * @param itemIndex Index of the input item the request belongs to.
@@ -44,10 +45,6 @@ export async function updateApplicationRequest(
 			'Select at least one setting to update the application',
 			{ itemIndex },
 		);
-	}
-
-	if (typeof body.custom_labels === 'string') {
-		body.custom_labels = Buffer.from(body.custom_labels, 'utf8').toString('base64');
 	}
 
 	return {

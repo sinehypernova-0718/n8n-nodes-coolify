@@ -33,6 +33,7 @@ import {
 	applicationFieldSpecs,
 	applicationFieldUiName,
 	COMMIT_SHA_PATTERN,
+	encodeFieldValue,
 	PORTS_EXPOSES_PATTERN,
 	PORTS_MAPPINGS_PATTERN,
 	type ApplicationFieldGroup,
@@ -418,7 +419,7 @@ export function buildUpdateApplicationBody(ctx: IExecuteFunctions, itemIndex: nu
 		}
 
 		if (typeof raw === 'string' && raw.trim() !== '') {
-			body[spec.apiName] = raw.trim();
+			body[spec.apiName] = encodeFieldValue(raw.trim(), spec);
 		}
 	}
 

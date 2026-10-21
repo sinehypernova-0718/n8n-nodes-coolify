@@ -93,6 +93,11 @@ export const APPLICATION_FIELD_COLLECTIONS: Record<
 };
 
 /**
+ * The encoding the Coolify API expects for the value of a field.
+ */
+export type ApplicationFieldEncoding = 'base64';
+
+/**
  * The contract of a single field of an application request.
  */
 export interface ApplicationFieldSpec {
@@ -120,6 +125,13 @@ export interface ApplicationFieldSpec {
 	secret?: boolean;
 	/** The number of rows of a text control. */
 	rows?: number;
+	/**
+	 * The encoding the Coolify API expects for the value of the field.
+	 *
+	 * The API rejects the plain text of the fields it expects base64 encoded,
+	 * so the node encodes them before it sends the request.
+	 */
+	encoding?: ApplicationFieldEncoding;
 }
 
 /**
@@ -591,9 +603,16 @@ const LIMIT_FIELDS: ApplicationFieldSpec[] = [
  * The fields of the Docker settings.
  */
 const DOCKER_FIELDS: ApplicationFieldSpec[] = [
-	field('custom_labels', 'Custom Labels', 'string', 'Custom labels of the container', {
-		rows: 3,
-	}),
+	field(
+		'custom_labels',
+		'Custom Labels',
+		'string',
+		'Custom labels of the container. The node encodes them as base64, which is what the API expects',
+		{
+			rows: 3,
+			encoding: 'base64',
+		},
+	),
 	field(
 		'custom_docker_run_options',
 		'Custom Docker Run Options',
@@ -1025,6 +1044,26 @@ export function applicationFieldValue(
 }
 
 /**
+ * Encode the value of a field the way the Coolify API expects it.
+ *
+ * The API validates the fields it expects base64 encoded and rejects the
+ * plain text with a validation error, so the node encodes them before it
+ * sends the request. The value is encoded exactly once, in the contract of
+ * the field, so a request can never carry an encoded value twice.
+ *
+ * @param value The value of the field.
+ * @param spec The contract of the field.
+ * @returns The value in the format the Coolify API expects.
+ */
+export function encodeFieldValue(value: string, spec: ApplicationFieldSpec): string {
+	if (spec.encoding === 'base64') {
+		return Buffer.from(value, 'utf8').toString('base64');
+	}
+
+	return value;
+}
+
+/**
  * Build the request body of an application creation request.
  *
  * @param ctx The execution context of the node.
@@ -1057,7 +1096,7 @@ export function buildCreateApplicationBody(
 			continue;
 		}
 
-		body[spec.apiName] = value;
+		body[spec.apiName] = typeof value === 'string' ? encodeFieldValue(value, spec) : value;
 	}
 
 	return body;
