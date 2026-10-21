@@ -1066,17 +1066,17 @@ export function buildCreateApplicationBody(
 /**
  * Pattern the ports of a container have to match in the Coolify API.
  */
-const PORTS_EXPOSES_PATTERN = /^\d+(,\d+)*$/;
+export const PORTS_EXPOSES_PATTERN = /^\d+(,\d+)*$/;
 
 /**
  * Pattern the port mappings of a container have to match in the Coolify API.
  */
-const PORTS_MAPPINGS_PATTERN = /^\d+:\d+(,\d+:\d+)*$/;
+export const PORTS_MAPPINGS_PATTERN = /^\d+:\d+(,\d+:\d+)*$/;
 
 /**
  * Pattern a commit SHA has to match in the Coolify API.
  */
-const COMMIT_SHA_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._\-/]*$/;
+export const COMMIT_SHA_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._\-/]*$/;
 
 /**
  * Validate the fields that every creation variant needs.
