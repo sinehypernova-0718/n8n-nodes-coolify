@@ -1,6 +1,7 @@
 import { type IExecuteFunctions } from 'n8n-workflow';
 
 import { addDestinationRequest } from './addDestination';
+import { cloneApplicationRequest } from './clone';
 import { createDockerfileApplicationRequest } from './createDockerfile';
 import { createDockerImageApplicationRequest } from './createDockerImage';
 import { createEnvRequest } from './createEnv';
@@ -27,12 +28,16 @@ import { listPreviewDeploymentsRequest } from './listPreviewDeployments';
 import { listRollbackImagesRequest } from './listRollbackImages';
 import { listStoragesRequest } from './listStorages';
 import { listTagsRequest } from './listTags';
+import { migrateApplicationRequest } from './migrate';
+import { moveApplicationRequest } from './move';
 import { removeDestinationRequest } from './removeDestination';
 import { restartApplicationRequest } from './restart';
+import { rollbackApplicationRequest } from './rollback';
 import { runStorageBackupRequest } from './runStorageBackup';
 import { setStorageBackupScheduleRequest } from './setStorageBackupSchedule';
 import { startApplicationRequest } from './start';
 import { stopApplicationRequest } from './stop';
+import { updateApplicationRequest } from './update';
 import { updateEnvsBulkRequest } from './updateEnvsBulk';
 import { updateEnvRequest } from './updateEnv';
 import { updatePreviewDomainsRequest } from './updatePreviewDomains';
@@ -50,6 +55,7 @@ export const applicationRequestBuilders: Record<
 	(this: IExecuteFunctions, itemIndex: number) => Promise<CoolifyRequest>
 > = {
 	addDestination: addDestinationRequest,
+	clone: cloneApplicationRequest,
 	createDockerfile: createDockerfileApplicationRequest,
 	createDockerImage: createDockerImageApplicationRequest,
 	createEnv: createEnvRequest,
@@ -76,12 +82,16 @@ export const applicationRequestBuilders: Record<
 	listRollbackImages: listRollbackImagesRequest,
 	listStorages: listStoragesRequest,
 	listTags: listTagsRequest,
+	migrate: migrateApplicationRequest,
+	move: moveApplicationRequest,
 	removeDestination: removeDestinationRequest,
 	restart: restartApplicationRequest,
+	rollback: rollbackApplicationRequest,
 	runStorageBackup: runStorageBackupRequest,
 	setStorageBackupSchedule: setStorageBackupScheduleRequest,
 	start: startApplicationRequest,
 	stop: stopApplicationRequest,
+	update: updateApplicationRequest,
 	updateEnv: updateEnvRequest,
 	updateEnvsBulk: updateEnvsBulkRequest,
 	updatePreviewDomains: updatePreviewDomainsRequest,
@@ -89,6 +99,7 @@ export const applicationRequestBuilders: Record<
 };
 
 export { addDestinationRequest } from './addDestination';
+export { cloneApplicationRequest } from './clone';
 export { createDockerfileApplicationRequest } from './createDockerfile';
 export { createDockerImageApplicationRequest } from './createDockerImage';
 export { createEnvRequest } from './createEnv';
@@ -115,13 +126,17 @@ export { listPreviewDeploymentsRequest } from './listPreviewDeployments';
 export { listRollbackImagesRequest } from './listRollbackImages';
 export { listStoragesRequest } from './listStorages';
 export { listTagsRequest } from './listTags';
+export { migrateApplicationRequest } from './migrate';
+export { moveApplicationRequest } from './move';
 export { requireApplicationUuid, requireEnvironmentVariableKey } from './parameters';
 export { removeDestinationRequest } from './removeDestination';
 export { restartApplicationRequest } from './restart';
+export { rollbackApplicationRequest } from './rollback';
 export { runStorageBackupRequest } from './runStorageBackup';
 export { setStorageBackupScheduleRequest } from './setStorageBackupSchedule';
 export { startApplicationRequest } from './start';
 export { stopApplicationRequest } from './stop';
+export { updateApplicationRequest } from './update';
 export { updateEnvsBulkRequest } from './updateEnvsBulk';
 export { updateEnvRequest } from './updateEnv';
 export { updatePreviewDomainsRequest } from './updatePreviewDomains';
