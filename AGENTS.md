@@ -8,7 +8,7 @@ stated below. Serena project memories (`.serena/memories/`: `core`, `tech_stack`
 project-scoped `opencode.jsonc` are **local to one machine and not shared**. Treat them as
 optional supplements: read them when present, never depend on them, and never assume a
 fact that only they contain. If a memory and this file disagree, this file wins for
-*rules*, the memory may still hold the newer *fact* — report the conflict instead of
+_rules_, the memory may still hold the newer _fact_ — report the conflict instead of
 silently editing either.
 
 **Where things belong.** Operational rules and task routing live in this file. Durable
@@ -55,7 +55,7 @@ Never skip a step, never reorder them, never treat one step as satisfying anothe
 
 ## 2. Serena-first code intelligence
 
-Serena is the primary way to *understand* this codebase. It runs project-scoped with
+Serena is the primary way to _understand_ this codebase. It runs project-scoped with
 `--project n8n-nodes-coolify`, `--context ide`, modes `interactive` + `editing`, plus
 `no-onboarding`; it exposes 22 tools.
 
@@ -71,14 +71,14 @@ memory hygiene. Do not read all of them by default, and do not re-run onboarding
 
 **Symbol-first, not file-first.**
 
-| Goal | Tool |
-|---|---|
-| Outline an unfamiliar file | `get_symbols_overview` (one call gives the whole outline) |
-| Locate a definition | `find_symbol` with `name_path_pattern` (+ `relative_path`) |
-| See every call site before changing a shared function | `find_referencing_symbols` |
-| Interface / override fan-out | `find_implementations`, `find_declaration` |
-| Fast type/health signal on touched files | `get_diagnostics_for_file` |
-| Text with no symbol (strings, config keys, comments) | `search_for_pattern` (regex) |
+| Goal                                                  | Tool                                                       |
+| ----------------------------------------------------- | ---------------------------------------------------------- |
+| Outline an unfamiliar file                            | `get_symbols_overview` (one call gives the whole outline)  |
+| Locate a definition                                   | `find_symbol` with `name_path_pattern` (+ `relative_path`) |
+| See every call site before changing a shared function | `find_referencing_symbols`                                 |
+| Interface / override fan-out                          | `find_implementations`, `find_declaration`                 |
+| Fast type/health signal on touched files              | `get_diagnostics_for_file`                                 |
+| Text with no symbol (strings, config keys, comments)  | `search_for_pattern` (regex)                               |
 
 Do not read whole source files when a symbol query answers the question.
 
@@ -110,17 +110,17 @@ the matching memory in the same task. Keep the `mem:`-reference graph intact.
 Nine servers are connected. Each has one job. Calling all of them on every task is a
 failure mode, not diligence.
 
-| Server | Use it for | Do not use it for |
-|---|---|---|
-| **serena** | Symbols, references, implementations, diagnostics, project memories, symbol-level edits | Whole-file text, shell commands, creating new files |
-| **git** | Local VCS state: status, diff, log, show, branch, commit, reset | Remote GitHub operations; paths outside this repository (it is bound to this repo and rejects others) |
-| **github** *(authenticated)* | Hosted-repo work on `sinehypernova-0718/n8n-nodes-coolify`: issues, PRs, reviews, releases, upstream code search, collaborators | Local history (use `git`); open-web research (use `exa`/`firecrawl`) |
-| **context7** | Version-accurate library/framework documentation (`n8n-workflow`, `vitest`, TypeScript) | General web research; live page content (use `exa`/`firecrawl`) |
-| **exa** | Open-ended semantic web search, reading a known page, multi-step agent research | Structured extraction or site crawling (use `firecrawl`); library API docs (use `context7`) |
-| **firecrawl** *(authenticated)* | Structured extraction (`scrape`/`parse`/`map`/`crawl`), site-wide crawling, scheduled monitors, public developer index (`developer_search`), government sources (`gov_search`), paper research | Cheap lookups — it is the most context-expensive server here; account usage limits (`credit_usage`) |
-| **playwright** | Real-browser verification: the n8n editor, a Coolify instance, a rendered docs page | Static documentation; this repository's tests are unit tests, not browser tests |
-| **context-mode** *(optional)* | Context reduction over large payloads: `ctx_execute_file` / `ctx_execute` compute over a file or command output so only a summary reaches the conversation; `ctx_index` + `ctx_search` make fetched content queryable | Small files, where the overhead exceeds the benefit |
-| **vercel** | **Do not invoke for this repository.** It is an npm-published n8n node package: no Vercel project, no `vercel.json`, no Vercel CI. Use it only if the user explicitly changes that policy | Everything else in this repo |
+| Server                          | Use it for                                                                                                                                                                                                            | Do not use it for                                                                                     |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **serena**                      | Symbols, references, implementations, diagnostics, project memories, symbol-level edits                                                                                                                               | Whole-file text, shell commands, creating new files                                                   |
+| **git**                         | Local VCS state: status, diff, log, show, branch, commit, reset                                                                                                                                                       | Remote GitHub operations; paths outside this repository (it is bound to this repo and rejects others) |
+| **github** _(authenticated)_    | Hosted-repo work on `sinehypernova-0718/n8n-nodes-coolify`: issues, PRs, reviews, releases, upstream code search, collaborators                                                                                       | Local history (use `git`); open-web research (use `exa`/`firecrawl`)                                  |
+| **context7**                    | Version-accurate library/framework documentation (`n8n-workflow`, `vitest`, TypeScript)                                                                                                                               | General web research; live page content (use `exa`/`firecrawl`)                                       |
+| **exa**                         | Open-ended semantic web search, reading a known page, multi-step agent research                                                                                                                                       | Structured extraction or site crawling (use `firecrawl`); library API docs (use `context7`)           |
+| **firecrawl** _(authenticated)_ | Structured extraction (`scrape`/`parse`/`map`/`crawl`), site-wide crawling, scheduled monitors, public developer index (`developer_search`), government sources (`gov_search`), paper research                        | Cheap lookups — it is the most context-expensive server here; account usage limits (`credit_usage`)   |
+| **playwright**                  | Real-browser verification: the n8n editor, a Coolify instance, a rendered docs page                                                                                                                                   | Static documentation; this repository's tests are unit tests, not browser tests                       |
+| **context-mode** _(optional)_   | Context reduction over large payloads: `ctx_execute_file` / `ctx_execute` compute over a file or command output so only a summary reaches the conversation; `ctx_index` + `ctx_search` make fetched content queryable | Small files, where the overhead exceeds the benefit                                                   |
+| **vercel**                      | **Do not invoke for this repository.** It is an npm-published n8n node package: no Vercel project, no `vercel.json`, no Vercel CI. Use it only if the user explicitly changes that policy                             | Everything else in this repo                                                                          |
 
 **Authentication is not authorisation.** `github` and `firecrawl` are authenticated, so
 read and research tools work. Before any mutating call (comment, issue, PR, release,
@@ -134,7 +134,7 @@ consent.
   `github.search_code` (code inside GitHub) · `context7` (library docs) ·
   `firecrawl.developer_search` (public repos/issues/PRs, not your account).
 - **Reading a page:** `exa.web_fetch_exa` for prose · `firecrawl.scrape` / `parse` for
-  structured data or a schema · `context-mode.ctx_fetch_and_index` when you will *query*
+  structured data or a schema · `context-mode.ctx_fetch_and_index` when you will _query_
   the page repeatedly instead of reading it once.
 - **Version control:** `git` for the working tree, `github` for the hosted repository.
 - **Context reduction:** `context-mode` when the payload is large and only an aggregate is
@@ -145,17 +145,17 @@ consent.
 
 ### Task routing
 
-| Task | Primary | Secondary | Skip |
-|---|---|---|---|
-| Local code change | `serena` (navigate) + native edit/shell | `git` (diff, status) | github, exa, firecrawl, playwright, vercel |
-| Understanding an unfamiliar module | `serena` (`get_symbols_overview` → `find_symbol`) | native `read` for prose/config | all web servers |
-| Documentation research (library API) | `context7` | `exa.web_fetch_exa` for the official page | firecrawl crawling/monitoring |
-| Upstream, issue or PR investigation | `github` | `firecrawl.developer_search` for public code | `git` (local only) |
-| Website or UI verification | `playwright` | `firecrawl.scrape` for static text | context-mode |
-| Git operations (local) | `git` | native shell `git` for porcelain output | github write tools |
-| Large payload, or repeated queries over fetched docs | `context-mode` (`ctx_execute_file`, `ctx_index` + `ctx_search`) | — | reading whole files into context |
-| Deployment / runtime errors | `vercel` only for Vercel-hosted targets, and never for this repo without an explicit policy change | — | everything else here |
-| Project knowledge and memories | `serena` memories (when present) | this file | — |
+| Task                                                 | Primary                                                                                            | Secondary                                    | Skip                                       |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------ |
+| Local code change                                    | `serena` (navigate) + native edit/shell                                                            | `git` (diff, status)                         | github, exa, firecrawl, playwright, vercel |
+| Understanding an unfamiliar module                   | `serena` (`get_symbols_overview` → `find_symbol`)                                                  | native `read` for prose/config               | all web servers                            |
+| Documentation research (library API)                 | `context7`                                                                                         | `exa.web_fetch_exa` for the official page    | firecrawl crawling/monitoring              |
+| Upstream, issue or PR investigation                  | `github`                                                                                           | `firecrawl.developer_search` for public code | `git` (local only)                         |
+| Website or UI verification                           | `playwright`                                                                                       | `firecrawl.scrape` for static text           | context-mode                               |
+| Git operations (local)                               | `git`                                                                                              | native shell `git` for porcelain output      | github write tools                         |
+| Large payload, or repeated queries over fetched docs | `context-mode` (`ctx_execute_file`, `ctx_index` + `ctx_search`)                                    | —                                            | reading whole files into context           |
+| Deployment / runtime errors                          | `vercel` only for Vercel-hosted targets, and never for this repo without an explicit policy change | —                                            | everything else here                       |
+| Project knowledge and memories                       | `serena` memories (when present)                                                                   | this file                                    | —                                          |
 
 **Rule:** pick the one server that owns the task. Add a second only when it adds
 information the first cannot provide. Never call a server "to be thorough".
@@ -187,18 +187,29 @@ information the first cannot provide. Never call a server "to be thorough".
 
 ### Architecture (source map)
 
-Six hand-written sources plus tests:
+Hand-written sources:
 
+- `nodes/Coolify/Coolify.node.ts` — the node class: the resource selector, the
+  assembled `properties` and `execute()`, which maps the selected operation to a
+  request and returns the parsed response body.
+- `nodes/Coolify/descriptions/ApplicationDescription.ts` — the description of the
+  `Applications` resource: the operation selector plus one field section per
+  operation. `descriptions/index.ts` re-exports it.
+- `nodes/Coolify/descriptions/applicationCreateFields.ts` — renders the field
+  contract of the creation endpoints as editor fields.
+- `nodes/Coolify/requests/application/<operation>.ts` — one request builder per
+  operation. `requests/application/index.ts` holds the operation → builder
+  registry, `requests/application/parameters.ts` the shared parameter
+  validation, `requests/application/applicationFields.ts` the field contract of
+  the creation endpoints. `requests/types.ts` holds the `CoolifyRequest` shape.
 - `nodes/Coolify/shared/apiRequest.ts` — the single authenticated transport.
 - `nodes/Coolify/shared/rateLimit.ts` — the retry / rate-limit policy, deliberately free
   of `n8n-workflow` imports so it can be unit-tested in isolation.
-- `nodes/Coolify/Coolify.node.ts` — the node class. It is currently a **bootstrap**: it
-  renders a `notice` property and exposes no operations. The planned operation and
-  endpoint list is in the README "Operations" section; those endpoints are *planned*, not
-  implemented.
 - `credentials/CoolifyApi.credentials.ts` — the `coolifyApi` credential.
 - `test/apiRequest.test.ts`, `test/rateLimit.test.ts` — vitest suites mirroring the two
   shared modules.
+- `test/applicationRequests.test.ts`, `test/applicationDescription.test.ts` — the
+  request-builder and description suites of the `Applications` resource.
 
 ### Transport invariant
 
@@ -265,12 +276,135 @@ shaping, the retry policy and the error surface are implemented exactly once, th
 - `test/` is **not** part of `tsconfig.json`, so `tsc --noEmit` does not type-check the
   tests.
 
+### Resource and operation descriptions
+
+- One n8n resource per Coolify resource. The selector value is lowercase and
+  singular (`application`) and so is the label — the n8n lint rules reject a
+  plural resource name.
+- The operation selector lives in the resource description file and lists
+  **only implemented operations**. An operation is added to the selector in the
+  same change that adds its request builder and its tests.
+- Every field repeats both keys in `displayOptions.show`: `resource` **and**
+  `operation`. A field of one operation is never visible for another.
+- One file per resource, named `<resource>Description.ts` in singular form
+  (`ApplicationDescription.ts`), exporting one `INodeProperties[]` constant. A
+  barrel file (`descriptions/index.ts`) re-exports it.
+- Operation fields follow the operation selector, grouped by a
+  `// ---- <resource>:<operation> ----` banner comment.
+- Optional fields of an operation live in a `collection` parameter
+  (`type: 'collection'`, `default: {}`) whose items are the optional fields. A
+  repeated array of objects is a `collection` with `typeOptions.multipleValues`;
+  a repeated array of strings is a `string` with `typeOptions.multipleValues`.
+- `noDataExpression: true` on the resource and operation selectors.
+- Describe only fields the published API documents. A field the controller
+  accepts but the OpenAPI does not publish stays out of the editor.
+- The reference implementation for this layout is the Pinterest node
+  (`descriptions/PinDescriptions.ts`, `requests/pin/<operation>.ts`).
+
+### Request builders
+
+- One file per operation: `requests/<resource>/<operation>.ts`, exporting
+  `export async function <verb><Object>Request(this: IExecuteFunctions, itemIndex: number): Promise<CoolifyRequest>`.
+- A builder returns a `CoolifyRequest` — `{ method, path, qs?, body?, retrySafety? }`.
+  The `path` is relative to the credential base URL and never contains
+  `/api/v1`.
+- A builder **never** calls the transport and never reads credentials. It only
+  describes the request; the node sends it through `coolifyApiRequest`.
+- Every builder is registered in `requests/<resource>/index.ts` in
+  `applicationRequestBuilders` and re-exported from `requests/index.ts`. The
+  registry is the single place that maps an operation to its endpoint.
+- Parameters are read with `this.getNodeParameter(name, itemIndex, default)`. A
+  required identifier the API rejects without is validated locally and throws a
+  `NodeOperationError` with `{ itemIndex }`.
+- The response is returned as the API sends it. Do not reshape it and do not
+  invent a response schema.
+- A mutation is `unsafe` for the retry policy unless the endpoint is provably
+  free of side effects when repeated. A read is safe by default.
+
+### Field contract
+
+- A field of a request body is defined **once**, in the contract module of its
+  resource, and is used by both the editor description and the request body
+  builder. A field can therefore never be shown without being sent, nor sent
+  without being shown.
+- The contract holds, per field: the name in the API, the label, the kind of
+  the editor control, the description, the default, the options, whether the
+  API requires it, and the API default of a boolean.
+- The contract is the boundary of the published contract: a variant accepts
+  exactly the fields the OpenAPI lists for it. Verify the coverage against
+  `openapi.yaml` when the contract changes — a field that is missing or extra
+  is a defect.
+
+### Optional field semantics
+
+- A field is sent only when the user set it: a text field when it is not empty,
+  a list when it has entries, a number when it is a number.
+- A boolean is sent when it is switched on. A boolean whose **API default is
+  `true`** is always sent, so the user can switch it off explicitly. Record
+  that default on the field.
+- A field of a `collection` parameter is sent only when the user added the
+  item — an untouched collection is absent from the request.
+- Never send an empty string, an empty list or an invented default to "fill"
+  the body.
+- A destructive operation states its effect in the operation description and
+  carries a `notice` field, and the removal of data is always an explicit act
+  (a separate toggle), never the side effect of an empty input.
+
+### The n8n node lint rules are binding
+
+`pnpm run lint` runs `eslint-plugin-n8n-nodes-base` and
+`@n8n/eslint-plugin-community-nodes`. Their rules decide the shape of every
+description; read them before writing one:
+
+- `node-param-description-excess-final-period` / `…missing-final-period`: a
+  single-sentence description must **not** end with a period, a multi-sentence
+  one **must**.
+- `node-param-description-weak`: a description that only repeats the display
+  name is removed.
+- `node-param-description-lowercase-first-char`: descriptions start uppercase.
+- `node-param-description-boolean-without-whether`: a boolean description
+  starts with "Whether".
+- `node-param-description-identical-to-display-name` and
+  `…option-description-identical-to-name`: a description must not repeat its
+  name.
+- `node-param-display-name-miscased`: `displayName` and option `name` are
+  title cased ("Create (Dockerfile Without Git)").
+- `node-param-options-type-unsorted-items` and
+  `node-param-collection-type-unsorted-items`: five or more options or
+  collection items are alphabetised by name.
+- `node-param-default-wrong-for-options`: the default of an options parameter
+  is one of its options — add an explicit "none" option for an unset value.
+- `node-param-default-wrong-for-collection`: a collection default is an object.
+- `node-param-collection-type-item-required`: collection items carry no
+  `required`.
+- `node-param-resource-with-plural-option`: the resource label is singular.
+- `node-resource-description-filename-against-convention`: a description file
+  is named `<resource>Description.ts` in singular form.
+- `node-param-operation-option-without-action`: every operation option has an
+  `action`.
+- `node-param-operation-without-no-data-expression` and
+  `node-param-resource-without-no-data-expression`.
+- `node-execute-block-missing-continue-on-fail`, `…error-missing-item-index`
+  and `…wrong-error-thrown`: `execute()` handles `continueOnFail` and throws
+  only `NodeApiError` / `NodeOperationError` with `{ itemIndex }`.
+- `require-node-api-error`: never re-throw a caught error unchanged.
+- `no-hardcoded-secrets`: a variable whose name looks like a secret (`…key`,
+  `…auth`, `…passwd`) must not be assigned a literal. Rename such an internal
+  identifier — for example a variant called `deployKey` became
+  `privateRepository`.
+
 ### Test coverage and known gaps
 
 - Covered: the whole retry policy (`rateLimit.ts`: failure classification, delay
   computation, header parsing, default safety, policy constants) and the transport
   behaviour (`apiRequest.ts`: retry vs no-retry per method and safety, budget exhaustion,
   wait-source fallbacks, error shape, cancellation, non-parallel retries).
+- Covered: the request builders of the `Applications` resource
+  (`test/applicationRequests.test.ts`) and the description of the resource
+  (`test/applicationDescription.test.ts`).
+- The **parity test** in `test/applicationDescription.test.ts` is authoritative: the
+  operation values of the description and the keys of `applicationRequestBuilders`
+  must be the same set. Extend it when an operation is added; never weaken it.
 - Gaps — do not assume coverage: the credential module, the node class itself, and any
   end-to-end path through a real n8n runtime are untested. A change in those areas needs
   a new test; a change to shared policy needs the mirrored suite updated.
@@ -281,17 +415,17 @@ shaping, the retry policy and the error surface are implemented exactly once, th
 
 ### Commands
 
-| Purpose | Command |
-|---|---|
-| Install | `pnpm install` |
-| Lint | `pnpm run lint` (eslint via `n8n-node lint`; autofix `pnpm run lint:fix`) |
-| Tests | `pnpm run test` (watch: `pnpm run test:watch`) |
-| Single test file | `pnpm exec vitest run test/rateLimit.test.ts` |
-| Build | `pnpm run build` (watch: `pnpm run build:watch`) |
-| Type check only | `pnpm exec tsc --noEmit` (does **not** cover `test/`) |
-| Format check | `pnpm exec prettier --check .` (only when formatting was touched) |
-| Local n8n with the node loaded | `pnpm run dev` |
-| Local release | `pnpm run release:local` (CI publish entry point: `pnpm run release`) |
+| Purpose                        | Command                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------- |
+| Install                        | `pnpm install`                                                            |
+| Lint                           | `pnpm run lint` (eslint via `n8n-node lint`; autofix `pnpm run lint:fix`) |
+| Tests                          | `pnpm run test` (watch: `pnpm run test:watch`)                            |
+| Single test file               | `pnpm exec vitest run test/rateLimit.test.ts`                             |
+| Build                          | `pnpm run build` (watch: `pnpm run build:watch`)                          |
+| Type check only                | `pnpm exec tsc --noEmit` (does **not** cover `test/`)                     |
+| Format check                   | `pnpm exec prettier --check .` (only when formatting was touched)         |
+| Local n8n with the node loaded | `pnpm run dev`                                                            |
+| Local release                  | `pnpm run release:local` (CI publish entry point: `pnpm run release`)     |
 
 CI runs `lint` → `test` → `build` on pull requests and on pushes to `master`;
 `publish.yml` publishes to npm on `v*.*.*` tags. The default branch is `master`, not
@@ -306,15 +440,29 @@ CI runs `lint` → `test` → `build` on pull requests and on pushes to `master`
    - `rateLimit.ts` change → `pnpm exec vitest run test/rateLimit.test.ts`.
    - `apiRequest.ts` change → `pnpm exec vitest run test/apiRequest.test.ts`.
    - Change in `nodes/` or `credentials/` → `pnpm run test` (full suite).
+   - Change in `descriptions/` or `requests/` → `pnpm exec vitest run
+test/applicationRequests.test.ts test/applicationDescription.test.ts`, then the
+     full suite.
    - Anything that can ship → `pnpm run lint` **and** `pnpm run test` **and**
-     `pnpm run build`; add `pnpm exec prettier --check .` if formatting was touched.
+     `pnpm run build`; add a Prettier check of the **changed files** if formatting
+     was touched.
+   - Scope the Prettier check to the changed files. The repository is kept
+     formatted with `prettier --write .`; a file that is being edited at the
+     same time can still make the repository-wide check fail. Do not reformat a
+     file you did not change — report the failure instead.
    - Configuration- or documentation-only change (this file, OpenCode/Serena config,
      memories) → a build is not justified; verify the configuration instead (see below).
 2. **Never weaken a test to make it pass.** Fix the code, or report the conflict.
-3. **Inspect the diff** before reporting: `git diff` / `git diff_unstaged` via the `git`
+3. **Check the request contract, not only the tests.** A test that repeats a wrong
+   expectation passes. After changing a request builder, run the compiled builder and
+   compare its method, path, body keys and query keys with the verified Coolify
+   contract, and compare the field contract with the property set of the endpoint in
+   `openapi.yaml`. A test that only asserts what the code already does proves
+   nothing.
+4. **Inspect the diff** before reporting: `git diff` / `git diff_unstaged` via the `git`
    MCP, plus `git status` for untracked files. Confirm that only the approved scope
    changed.
-4. **Report exactly what ran:**
+5. **Report exactly what ran:**
 
    ```
    Files changed:  <path> — <one-line behavioural change>
@@ -328,7 +476,7 @@ CI runs `lint` → `test` → `build` on pull requests and on pushes to `master`
 
 - `opencode mcp list` → the servers you rely on show `connected`.
 - Serena startup log (`~/.serena/logs/<date>/mcp_*.txt`) → `Activating
-  n8n-nodes-coolify` and the expected `Active modes`.
+n8n-nodes-coolify` and the expected `Active modes`.
 - A `serena find_symbol` call that resolves a known symbol, e.g. `coolifyApiRequest`.
 - `serena memories check` → no referential integrity issues.
 - On a Windows console set `PYTHONIOENCODING=utf-8` before running the Serena CLI, or it
