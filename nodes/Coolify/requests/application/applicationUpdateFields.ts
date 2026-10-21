@@ -163,6 +163,7 @@ export const APPLICATION_UPDATE_BOOLEAN_OPTIONS = [
  * The groups of the update contract that the editor renders as a collection.
  */
 export const APPLICATION_UPDATE_COLLECTION_GROUPS = [
+	'common',
 	'deployment',
 	'build',
 	'gitBuild',
@@ -183,6 +184,7 @@ export type ApplicationUpdateCollectionGroup =
  * The collection that holds the optional settings of a group.
  */
 export const APPLICATION_UPDATE_COLLECTIONS: Record<ApplicationUpdateCollectionGroup, string> = {
+	common: 'updateApplicationSettings',
 	deployment: 'updateDeploymentSettings',
 	build: 'updateBuildSettings',
 	gitBuild: 'updateGitBuildSettings',

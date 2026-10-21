@@ -1,7 +1,15 @@
-import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
+import { type IDataObject, type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
 import { requireApplicationUuid } from './parameters';
+import {
+	STORAGE_BACKUP_SCHEDULE_COLLECTIONS,
+	STORAGE_BACKUP_SCHEDULE_ENABLED,
+	storageBackupScheduleBoolean,
+	storageBackupScheduleField,
+	storageBackupScheduleNumber,
+	storageBackupScheduleText,
+} from './storageBackupScheduleFields';
 
 /**
  * Build the request that creates or replaces the backup schedule of a storage.
@@ -45,8 +53,52 @@ export async function setStorageBackupScheduleRequest(
 		);
 	}
 
-	const saveS3 = this.getNodeParameter('saveS3', itemIndex, false) === true;
-	const disableLocalBackup = this.getNodeParameter('disableLocalBackup', itemIndex, false) === true;
+	// The values of the schedule live in collections. A collection the user
+	// never touched is absent, and a field the collection does not hold falls
+	// back to the parameter of the flat layout of an earlier version of the
+	// node and then to the default of the API.
+	const options = this.getNodeParameter(
+		STORAGE_BACKUP_SCHEDULE_COLLECTIONS.options,
+		itemIndex,
+		{},
+	) as IDataObject;
+	const localRetention = this.getNodeParameter(
+		STORAGE_BACKUP_SCHEDULE_COLLECTIONS.localRetention,
+		itemIndex,
+		{},
+	) as IDataObject;
+	const s3Retention = this.getNodeParameter(
+		STORAGE_BACKUP_SCHEDULE_COLLECTIONS.s3Retention,
+		itemIndex,
+		{},
+	) as IDataObject;
+	const notifications = this.getNodeParameter(
+		STORAGE_BACKUP_SCHEDULE_COLLECTIONS.notifications,
+		itemIndex,
+		{},
+	) as IDataObject;
+
+	const saveS3 = storageBackupScheduleBoolean.call(
+		this,
+		itemIndex,
+		options,
+		storageBackupScheduleField('saveS3'),
+	);
+	const disableLocalBackup = storageBackupScheduleBoolean.call(
+		this,
+		itemIndex,
+		options,
+		storageBackupScheduleField('disableLocalBackup'),
+	);
+	const stopDuringBackup = storageBackupScheduleBoolean.call(
+		this,
+		itemIndex,
+		options,
+		storageBackupScheduleField('stopDuringBackup'),
+	);
+	const s3StorageUuid = storageBackupScheduleText
+		.call(this, itemIndex, options, storageBackupScheduleField('s3StorageUuid'))
+		.trim();
 
 	if (disableLocalBackup && !saveS3) {
 		throw new NodeOperationError(
@@ -56,7 +108,6 @@ export async function setStorageBackupScheduleRequest(
 		);
 	}
 
-	const s3StorageUuid = (this.getNodeParameter('s3StorageUuid', itemIndex, '') as string).trim();
 	if (saveS3 && !s3StorageUuid) {
 		throw new NodeOperationError(
 			this.getNode(),
@@ -67,31 +118,60 @@ export async function setStorageBackupScheduleRequest(
 
 	const body: CoolifyRequest['body'] = {
 		frequency,
-		enabled: this.getNodeParameter('enabled', itemIndex, true) === true,
-		retention_amount_locally: this.getNodeParameter(
-			'retentionAmountLocally',
+		enabled:
+			this.getNodeParameter(
+				STORAGE_BACKUP_SCHEDULE_ENABLED.uiName,
+				itemIndex,
+				STORAGE_BACKUP_SCHEDULE_ENABLED.default,
+			) === true,
+		retention_amount_locally: storageBackupScheduleNumber.call(
+			this,
 			itemIndex,
-			7,
-		) as number,
-		retention_days_locally: this.getNodeParameter('retentionDaysLocally', itemIndex, 0) as number,
-		retention_max_storage_locally: this.getNodeParameter(
-			'retentionMaxStorageLocally',
+			localRetention,
+			storageBackupScheduleField('retentionAmountLocally'),
+		),
+		retention_days_locally: storageBackupScheduleNumber.call(
+			this,
 			itemIndex,
-			0,
-		) as number,
-		retention_amount_s3: this.getNodeParameter('retentionAmountS3', itemIndex, 7) as number,
-		retention_days_s3: this.getNodeParameter('retentionDaysS3', itemIndex, 0) as number,
-		retention_max_storage_s3: this.getNodeParameter(
-			'retentionMaxStorageS3',
+			localRetention,
+			storageBackupScheduleField('retentionDaysLocally'),
+		),
+		retention_max_storage_locally: storageBackupScheduleNumber.call(
+			this,
 			itemIndex,
-			0,
-		) as number,
-		timeout: this.getNodeParameter('timeout', itemIndex, 36_000) as number,
-		missing_backup_notification_days: this.getNodeParameter(
-			'missingBackupNotificationDays',
+			localRetention,
+			storageBackupScheduleField('retentionMaxStorageLocally'),
+		),
+		retention_amount_s3: storageBackupScheduleNumber.call(
+			this,
 			itemIndex,
-			0,
-		) as number,
+			s3Retention,
+			storageBackupScheduleField('retentionAmountS3'),
+		),
+		retention_days_s3: storageBackupScheduleNumber.call(
+			this,
+			itemIndex,
+			s3Retention,
+			storageBackupScheduleField('retentionDaysS3'),
+		),
+		retention_max_storage_s3: storageBackupScheduleNumber.call(
+			this,
+			itemIndex,
+			s3Retention,
+			storageBackupScheduleField('retentionMaxStorageS3'),
+		),
+		timeout: storageBackupScheduleNumber.call(
+			this,
+			itemIndex,
+			notifications,
+			storageBackupScheduleField('timeout'),
+		),
+		missing_backup_notification_days: storageBackupScheduleNumber.call(
+			this,
+			itemIndex,
+			notifications,
+			storageBackupScheduleField('missingBackupNotificationDays'),
+		),
 	};
 
 	if (saveS3) {
@@ -100,7 +180,7 @@ export async function setStorageBackupScheduleRequest(
 	if (disableLocalBackup) {
 		body.disable_local_backup = true;
 	}
-	if (this.getNodeParameter('stopDuringBackup', itemIndex, false) === true) {
+	if (stopDuringBackup) {
 		body.stop_during_backup = true;
 	}
 	if (s3StorageUuid !== '') {

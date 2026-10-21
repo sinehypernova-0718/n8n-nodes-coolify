@@ -13,7 +13,7 @@ import {
 	applicationFieldUiName,
 	type ApplicationFieldSpec,
 	type ApplicationGroupedFieldSpec,
-} from '../requests/application/applicationFields';
+} from '../../requests/application/applicationFields';
 
 /**
  * The default value of a field, derived from its kind.

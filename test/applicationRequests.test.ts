@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { type IExecuteFunctions, type INode, NodeOperationError } from 'n8n-workflow';
 
 import {
+	APPLICATION_CREATE_VARIANTS,
+	APPLICATION_FIELD_COLLECTIONS,
+	applicationFieldSpecs,
+	applicationFieldUiName,
+} from '../nodes/Coolify/requests/application/applicationFields';
+import {
 	addDestinationRequest,
 	cloneApplicationRequest,
 	createDockerfileApplicationRequest,
@@ -1039,6 +1045,216 @@ describe('application request builders', () => {
 			});
 		});
 
+		it('requests the same schedule when the collections hold the defaults of the fields', async () => {
+			const withoutCollections = await setStorageBackupScheduleRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					storageUuid: 'storage-789',
+					frequency: '0 2 * * *',
+				}),
+				0,
+			);
+
+			const withCollections = await setStorageBackupScheduleRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					storageUuid: 'storage-789',
+					frequency: '0 2 * * *',
+					backupOptions: {
+						saveS3: false,
+						s3StorageUuid: '',
+						disableLocalBackup: false,
+						stopDuringBackup: false,
+					},
+					localRetention: {
+						retentionAmountLocally: 7,
+						retentionDaysLocally: 0,
+						retentionMaxStorageLocally: 0,
+					},
+					s3Retention: {
+						retentionAmountS3: 7,
+						retentionDaysS3: 0,
+						retentionMaxStorageS3: 0,
+					},
+					notifications: { timeout: 36_000, missingBackupNotificationDays: 0 },
+				}),
+				0,
+			);
+
+			expect(withCollections.body).toEqual(withoutCollections.body);
+		});
+
+		it('requests the same schedule when the collections hold only the fields the user added', async () => {
+			const withoutCollections = await setStorageBackupScheduleRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					storageUuid: 'storage-789',
+					frequency: '0 2 * * *',
+				}),
+				0,
+			);
+
+			const withCollections = await setStorageBackupScheduleRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					storageUuid: 'storage-789',
+					frequency: '0 2 * * *',
+					backupOptions: { saveS3: false },
+					localRetention: { retentionAmountLocally: 7 },
+				}),
+				0,
+			);
+
+			expect(withCollections.body).toEqual(withoutCollections.body);
+		});
+
+		it('sends the values of the collections', async () => {
+			const request = await setStorageBackupScheduleRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					storageUuid: 'storage-789',
+					frequency: '0 2 * * *',
+					backupOptions: {
+						saveS3: true,
+						s3StorageUuid: 's3-000',
+						disableLocalBackup: true,
+						stopDuringBackup: true,
+					},
+					localRetention: {
+						retentionAmountLocally: 3,
+						retentionDaysLocally: 5,
+						retentionMaxStorageLocally: 1024,
+					},
+					s3Retention: {
+						retentionAmountS3: 2,
+						retentionDaysS3: 4,
+						retentionMaxStorageS3: 2048,
+					},
+					notifications: { timeout: 120, missingBackupNotificationDays: 3 },
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({
+				frequency: '0 2 * * *',
+				enabled: true,
+				retention_amount_locally: 3,
+				retention_days_locally: 5,
+				retention_max_storage_locally: 1024,
+				retention_amount_s3: 2,
+				retention_days_s3: 4,
+				retention_max_storage_s3: 2048,
+				timeout: 120,
+				missing_backup_notification_days: 3,
+				save_s3: true,
+				disable_local_backup: true,
+				stop_during_backup: true,
+				s3_storage_uuid: 's3-000',
+			});
+			expect(Object.keys(request.body ?? {})).toHaveLength(14);
+		});
+
+		it('omits the flags of the collections that are switched off', async () => {
+			const request = await setStorageBackupScheduleRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					storageUuid: 'storage-789',
+					frequency: '0 2 * * *',
+					backupOptions: {
+						saveS3: false,
+						s3StorageUuid: '',
+						disableLocalBackup: false,
+						stopDuringBackup: false,
+					},
+				}),
+				0,
+			);
+
+			expect(request.body).not.toHaveProperty('save_s3');
+			expect(request.body).not.toHaveProperty('disable_local_backup');
+			expect(request.body).not.toHaveProperty('stop_during_backup');
+			expect(request.body).not.toHaveProperty('s3_storage_uuid');
+		});
+
+		it('sends the uuid of the S3 storage even when the S3 backups are switched off', async () => {
+			const request = await setStorageBackupScheduleRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					storageUuid: 'storage-789',
+					frequency: '0 2 * * *',
+					backupOptions: { saveS3: false, s3StorageUuid: 's3-000' },
+				}),
+				0,
+			);
+
+			expect(request.body).toMatchObject({ s3_storage_uuid: 's3-000' });
+			expect(request.body).not.toHaveProperty('save_s3');
+		});
+
+		it('keeps the values of a workflow that was saved before the fields were grouped', async () => {
+			const request = await setStorageBackupScheduleRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					storageUuid: 'storage-789',
+					frequency: '0 2 * * *',
+					retentionAmountLocally: 30,
+					retentionDaysLocally: 9,
+					timeout: 600,
+					missingBackupNotificationDays: 14,
+				}),
+				0,
+			);
+
+			expect(request.body).toMatchObject({
+				retention_amount_locally: 30,
+				retention_days_locally: 9,
+				timeout: 600,
+				missing_backup_notification_days: 14,
+			});
+		});
+
+		it('prefers the value of a collection over the value of the old parameter', async () => {
+			const request = await setStorageBackupScheduleRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					storageUuid: 'storage-789',
+					frequency: '0 2 * * *',
+					retentionAmountLocally: 30,
+					timeout: 600,
+					localRetention: { retentionAmountLocally: 3 },
+					notifications: { timeout: 120 },
+				}),
+				0,
+			);
+
+			expect(request.body).toMatchObject({
+				retention_amount_locally: 3,
+				timeout: 120,
+			});
+		});
+
+		it('keeps a false and a zero of a collection instead of taking the old parameter', async () => {
+			const request = await setStorageBackupScheduleRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					storageUuid: 'storage-789',
+					frequency: '0 2 * * *',
+					retentionAmountLocally: 30,
+					retentionDaysLocally: 9,
+					stopDuringBackup: true,
+					localRetention: { retentionAmountLocally: 0, retentionDaysLocally: 0 },
+					backupOptions: { stopDuringBackup: false },
+				}),
+				0,
+			);
+
+			expect(request.body).toMatchObject({
+				retention_amount_locally: 0,
+				retention_days_locally: 0,
+			});
+			expect(request.body).not.toHaveProperty('stop_during_backup');
+		});
+
 		it('omits the flags that default to false and are switched off', async () => {
 			const request = await setStorageBackupScheduleRequest.call(
 				createContext({
@@ -1112,6 +1328,34 @@ describe('application request builders', () => {
 						storageUuid: 'storage-789',
 						frequency: '0 2 * * *',
 						saveS3: true,
+					}),
+					0,
+				),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('fails when the local backups of the collection are disabled without S3 backups', async () => {
+			await expect(
+				setStorageBackupScheduleRequest.call(
+					createContext({
+						applicationUuid: 'abc-123',
+						storageUuid: 'storage-789',
+						frequency: '0 2 * * *',
+						backupOptions: { disableLocalBackup: true },
+					}),
+					0,
+				),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('fails when the S3 backups of the collection are enabled without an S3 storage', async () => {
+			await expect(
+				setStorageBackupScheduleRequest.call(
+					createContext({
+						applicationUuid: 'abc-123',
+						storageUuid: 'storage-789',
+						frequency: '0 2 * * *',
+						backupOptions: { saveS3: true },
 					}),
 					0,
 				),
@@ -1536,7 +1780,6 @@ describe('application request builders', () => {
 				git_repository: 'https://github.com/acme/app',
 				git_branch: 'main',
 				build_pack: 'nixpacks',
-				autogenerate_domain: true,
 			});
 		});
 
@@ -1587,10 +1830,28 @@ describe('application request builders', () => {
 			expect(request.body).not.toHaveProperty('is_static');
 		});
 
-		it('always sends the top level boolean fields the API defaults to true', async () => {
-			const request = await createPublicApplicationRequest.call(createContext(base), 0);
+		it('sends the boolean fields of the application settings the API defaults to true', async () => {
+			const request = await createPublicApplicationRequest.call(
+				createContext({ ...base, applicationSettings: { autogenerateDomain: true } }),
+				0,
+			);
 
 			expect(request.body).toMatchObject({ autogenerate_domain: true });
+		});
+
+		it('sends a boolean of the application settings the user switched off', async () => {
+			const request = await createPublicApplicationRequest.call(
+				createContext({ ...base, applicationSettings: { autogenerateDomain: false } }),
+				0,
+			);
+
+			expect(request.body).toMatchObject({ autogenerate_domain: false });
+		});
+
+		it('leaves the boolean fields of the application settings to the API default when the collection is untouched', async () => {
+			const request = await createPublicApplicationRequest.call(createContext(base), 0);
+
+			expect(request.body).not.toHaveProperty('autogenerate_domain');
 		});
 
 		it('sends a collection boolean the user switched off', async () => {
@@ -1622,13 +1883,19 @@ describe('application request builders', () => {
 
 		it('fails when the exposed ports are not a list of ports', async () => {
 			await expect(
-				createPublicApplicationRequest.call(createContext({ ...base, portsExposes: 'http' }), 0),
+				createPublicApplicationRequest.call(
+					createContext({ ...base, applicationSettings: { portsExposes: 'http' } }),
+					0,
+				),
 			).rejects.toThrowError(NodeOperationError);
 		});
 
 		it('fails when a tag is shorter than two characters', async () => {
 			await expect(
-				createPublicApplicationRequest.call(createContext({ ...base, tags: ['a'] }), 0),
+				createPublicApplicationRequest.call(
+					createContext({ ...base, applicationSettings: { tags: ['a'] } }),
+					0,
+				),
 			).rejects.toThrowError(NodeOperationError);
 		});
 
@@ -2122,7 +2389,10 @@ describe('application request builders', () => {
 
 		it('sends the domains that are entered', async () => {
 			const request = await updateApplicationRequest.call(
-				createContext({ applicationUuid: 'abc-123', domains: 'https://example.com' }),
+				createContext({
+					applicationUuid: 'abc-123',
+					updateApplicationSettings: { domains: 'https://example.com' },
+				}),
 				0,
 			);
 
@@ -2141,7 +2411,10 @@ describe('application request builders', () => {
 		it('fails when the exposed ports are not a list of ports', async () => {
 			await expect(
 				updateApplicationRequest.call(
-					createContext({ applicationUuid: 'abc-123', portsExposes: '80,https' }),
+					createContext({
+						applicationUuid: 'abc-123',
+						updateApplicationSettings: { portsExposes: '80,https' },
+					}),
 					0,
 				),
 			).rejects.toThrowError(NodeOperationError);
@@ -2150,7 +2423,10 @@ describe('application request builders', () => {
 		it('fails when the commit sha holds forbidden characters', async () => {
 			await expect(
 				updateApplicationRequest.call(
-					createContext({ applicationUuid: 'abc-123', gitCommitSha: 'abc def' }),
+					createContext({
+						applicationUuid: 'abc-123',
+						updateGitBuildSettings: { gitCommitSha: 'abc def' },
+					}),
 					0,
 				),
 			).rejects.toThrowError(NodeOperationError);
@@ -2369,6 +2645,96 @@ describe('application request builders', () => {
 			await expect(
 				moveApplicationRequest.call(createContext({ applicationUuid: 'abc-123' }), 0),
 			).rejects.toThrowError(NodeOperationError);
+		});
+	});
+
+	describe('the booleans whose API default is true', () => {
+		const sourceValues: Record<string, unknown> = {
+			gitRepository: 'https://github.com/acme/app',
+			gitBranch: 'main',
+			buildPack: 'nixpacks',
+			dockerfile: 'FROM alpine',
+			dockerRegistryImageName: 'nginx',
+			dockerRegistryImageTag: 'latest',
+			githubAppUuid: 'app-1',
+			privateKeyUuid: 'key-1',
+		};
+
+		const builders: Record<
+			string,
+			(this: IExecuteFunctions, itemIndex: number) => Promise<CoolifyRequest>
+		> = {
+			public: createPublicApplicationRequest,
+			githubApp: createPrivateGithubAppApplicationRequest,
+			privateRepository: createPrivateDeployKeyApplicationRequest,
+			dockerfile: createDockerfileApplicationRequest,
+			dockerImage: createDockerImageApplicationRequest,
+		};
+
+		const base = {
+			projectUuid: 'project-1',
+			serverUuid: 'server-1',
+			environmentName: 'production',
+		};
+
+		/**
+		 * The parameters of a creation request of a variant.
+		 *
+		 * @param variant The creation variant.
+		 * @returns The parameters the builder of the variant needs.
+		 */
+		function parametersOf(variant: string): Record<string, unknown> {
+			const parameters: Record<string, unknown> = { ...base };
+
+			for (const spec of applicationFieldSpecs(variant as never)) {
+				if (spec.group !== 'source') {
+					continue;
+				}
+
+				const name = applicationFieldUiName(spec.apiName);
+				parameters[name] = spec.defaultValue ?? sourceValues[name];
+			}
+
+			return parameters;
+		}
+
+		it('sends the field as false when the user switched it off', async () => {
+			for (const variant of APPLICATION_CREATE_VARIANTS) {
+				for (const spec of applicationFieldSpecs(variant)) {
+					if (spec.apiDefault !== true) {
+						continue;
+					}
+
+					const collection =
+						APPLICATION_FIELD_COLLECTIONS[spec.group as keyof typeof APPLICATION_FIELD_COLLECTIONS];
+					const parameters = parametersOf(variant);
+					parameters[collection] = { [applicationFieldUiName(spec.apiName)]: false };
+
+					const request = await builders[variant].call(createContext(parameters), 0);
+
+					expect(request.body, `the field ${spec.apiName} was not sent to the API`).toHaveProperty(
+						spec.apiName,
+						false,
+					);
+				}
+			}
+		});
+
+		it('leaves the field to the default of the API when the user did not add it', async () => {
+			for (const variant of APPLICATION_CREATE_VARIANTS) {
+				for (const spec of applicationFieldSpecs(variant)) {
+					if (spec.apiDefault !== true) {
+						continue;
+					}
+
+					const request = await builders[variant].call(createContext(parametersOf(variant)), 0);
+
+					expect(
+						request.body,
+						`the field ${spec.apiName} was sent although the user did not add it`,
+					).not.toHaveProperty(spec.apiName);
+				}
+			}
 		});
 	});
 });

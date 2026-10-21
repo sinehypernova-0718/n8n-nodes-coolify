@@ -11,10 +11,12 @@ import type { INodeProperties } from 'n8n-workflow';
 import {
 	APPLICATION_CREATE_VARIANTS,
 	APPLICATION_FIELD_COLLECTIONS,
-	applicationCollectionGroups,
+	applicationCollectionGroupsOfEveryVariant,
 	applicationFieldSpecs,
+	applicationGroupFieldSpecs,
+	applicationSharedFieldSpecs,
 	type ApplicationCreateVariant,
-} from '../requests/application/applicationFields';
+} from '../../requests/application/applicationFields';
 import { fieldProperty, showFor, sortedItems } from './applicationFieldProperties';
 
 /**
@@ -32,6 +34,7 @@ export const APPLICATION_CREATE_OPERATIONS: Record<ApplicationCreateVariant, str
  * The display name of every creation variant.
  */
 const COLLECTION_DISPLAY_NAMES: Record<string, string> = {
+	common: 'Application Settings',
 	deployment: 'Deployment Settings',
 	build: 'Build Settings',
 	gitBuild: 'Git Build Settings',
@@ -60,11 +63,7 @@ export function applicationCreateDescription(): INodeProperties[] {
 	);
 
 	// The shared top level fields.
-	for (const spec of applicationFieldSpecs('public')) {
-		if (spec.group !== 'identity' && spec.group !== 'common') {
-			continue;
-		}
-
+	for (const spec of applicationSharedFieldSpecs()) {
 		properties.push({
 			...fieldProperty(spec),
 			required: spec.required,
@@ -88,12 +87,8 @@ export function applicationCreateDescription(): INodeProperties[] {
 	}
 
 	// The optional fields, grouped in collections.
-	for (const group of applicationCollectionGroups('public')) {
-		const variants = APPLICATION_CREATE_VARIANTS.filter((variant) =>
-			group.variants.includes(variant),
-		);
-		const operations = variants.map((variant) => APPLICATION_CREATE_OPERATIONS[variant]);
-		const specs = applicationFieldSpecs(variants[0]).filter((spec) => spec.group === group.group);
+	for (const group of applicationCollectionGroupsOfEveryVariant()) {
+		const operations = group.variants.map((variant) => APPLICATION_CREATE_OPERATIONS[variant]);
 
 		properties.push({
 			displayName: COLLECTION_DISPLAY_NAMES[group.group],
@@ -105,7 +100,7 @@ export function applicationCreateDescription(): INodeProperties[] {
 			description:
 				'Optional settings of the application. The API only applies the fields that are filled in.',
 			displayOptions: showFor(operations),
-			options: sortedItems(specs),
+			options: sortedItems(applicationGroupFieldSpecs(group.group)),
 		});
 	}
 

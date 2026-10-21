@@ -12,7 +12,7 @@ import {
 	APPLICATION_UPDATE_COLLECTIONS,
 	applicationUpdateCollectionGroups,
 	applicationUpdateFieldSpecs,
-} from '../requests/application/applicationUpdateFields';
+} from '../../requests/application/applicationUpdateFields';
 import { fieldProperty, showFor, sortedItems } from './applicationFieldProperties';
 
 /**
@@ -24,6 +24,7 @@ export const APPLICATION_UPDATE_OPERATION = 'update';
  * The display name of every collection of the update operation.
  */
 const COLLECTION_DISPLAY_NAMES: Record<string, string> = {
+	common: 'Application Settings',
 	deployment: 'Deployment Settings',
 	build: 'Build Settings',
 	gitBuild: 'Git Build Settings',
@@ -38,8 +39,8 @@ const COLLECTION_DISPLAY_NAMES: Record<string, string> = {
  * The description of the application update operation.
  *
  * The update only changes the settings the user filled in, so the settings
- * that are not touched keep their current value. The settings that are not
- * part of a collection are rendered at the top level, the remaining ones are
+ * that are not touched keep their current value. The identity and the source
+ * of the application are rendered at the top level, every other setting is
  * rendered as a collection of optional settings.
  *
  * @returns The description of the update operation.
@@ -51,7 +52,7 @@ export function applicationUpdateDescription(): INodeProperties[] {
 
 	// The settings that are rendered at the top level.
 	for (const spec of specs) {
-		if (spec.group !== 'identity' && spec.group !== 'source' && spec.group !== 'common') {
+		if (spec.group !== 'identity' && spec.group !== 'source') {
 			continue;
 		}
 

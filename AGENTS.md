@@ -107,19 +107,20 @@ the matching memory in the same task. Keep the `mem:`-reference graph intact.
 
 ## 3. MCP orchestration
 
-Nine servers are connected. Each has one job. Calling all of them on every task is a
+Ten servers are connected. Each has one job. Calling all of them on every task is a
 failure mode, not diligence.
 
 | Server                          | Use it for                                                                                                                                                                                                            | Do not use it for                                                                                     |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | **serena**                      | Symbols, references, implementations, diagnostics, project memories, symbol-level edits                                                                                                                               | Whole-file text, shell commands, creating new files                                                   |
 | **git**                         | Local VCS state: status, diff, log, show, branch, commit, reset                                                                                                                                                       | Remote GitHub operations; paths outside this repository (it is bound to this repo and rejects others) |
+| **fff**                         | Fast local search over the git-indexed checkout: `fff.grep` (file content), `fff.find_files` (paths), `fff.multi_grep` (one OR search over several identifiers)                                                       | Semantic navigation (`serena`); library API docs (`context7`); content outside the indexed checkout   |
 | **github** _(authenticated)_    | Hosted-repo work on `sinehypernova-0718/n8n-nodes-coolify`: issues, PRs, reviews, releases, upstream code search, collaborators                                                                                       | Local history (use `git`); open-web research (use `exa`/`firecrawl`)                                  |
 | **context7**                    | Version-accurate library/framework documentation (`n8n-workflow`, `vitest`, TypeScript)                                                                                                                               | General web research; live page content (use `exa`/`firecrawl`)                                       |
 | **exa**                         | Open-ended semantic web search, reading a known page, multi-step agent research                                                                                                                                       | Structured extraction or site crawling (use `firecrawl`); library API docs (use `context7`)           |
 | **firecrawl** _(authenticated)_ | Structured extraction (`scrape`/`parse`/`map`/`crawl`), site-wide crawling, scheduled monitors, public developer index (`developer_search`), government sources (`gov_search`), paper research                        | Cheap lookups — it is the most context-expensive server here; account usage limits (`credit_usage`)   |
 | **playwright**                  | Real-browser verification: the n8n editor, a Coolify instance, a rendered docs page                                                                                                                                   | Static documentation; this repository's tests are unit tests, not browser tests                       |
-| **context-mode** _(optional)_   | Context reduction over large payloads: `ctx_execute_file` / `ctx_execute` compute over a file or command output so only a summary reaches the conversation; `ctx_index` + `ctx_search` make fetched content queryable | Small files, where the overhead exceeds the benefit                                                   |
+| **context-mode** _(optional)_   | Context reduction: `ctx_execute` / `ctx_execute_file` (aggregate over a file or a command output), `ctx_batch_execute` (many commands, answered inline), `ctx_index` + `ctx_search` (fetched content stays queryable) | Small files, where the overhead exceeds the benefit; see §4 for when it pays                          |
 | **vercel**                      | **Do not invoke for this repository.** It is an npm-published n8n node package: no Vercel project, no `vercel.json`, no Vercel CI. Use it only if the user explicitly changes that policy                             | Everything else in this repo                                                                          |
 
 **Authentication is not authorisation.** `github` and `firecrawl` are authenticated, so
@@ -132,10 +133,15 @@ consent.
 
 - **Search:** `exa` (semantic, open web) · `firecrawl` (structured, site-wide, monitors) ·
   `github.search_code` (code inside GitHub) · `context7` (library docs) ·
-  `firecrawl.developer_search` (public repos/issues/PRs, not your account).
+  `firecrawl.developer_search` (public repos/issues/PRs, not your account) ·
+  `fff.grep` (content in the local checkout).
 - **Reading a page:** `exa.web_fetch_exa` for prose · `firecrawl.scrape` / `parse` for
   structured data or a schema · `context-mode.ctx_fetch_and_index` when you will _query_
   the page repeatedly instead of reading it once.
+- **Files and code in the checkout:** `fff.find_files` (paths) · `fff.grep` (content) ·
+  `fff.multi_grep` (one OR search over several identifiers). Native `grep` / `glob`
+  still win when the pattern is exact and the result set is small; `serena` still wins
+  for symbols, references and implementations.
 - **Version control:** `git` for the working tree, `github` for the hosted repository.
 - **Context reduction:** `context-mode` when the payload is large and only an aggregate is
   needed; otherwise read the file normally.
@@ -143,11 +149,17 @@ consent.
   `context7` only when the answer is about a library API, and index with `context-mode`
   only when you will query the result repeatedly.
 
+**`fff` results are pointers, not proof.** On a query with no exact hit the server
+auto-broadens the query and falls back to fuzzy matching, so a returned line can be an
+approximation of what you asked for. Read the file before you assert a symbol name,
+type, field or line number, and never treat an "approximate" hit as evidence.
+
 ### Task routing
 
 | Task                                                 | Primary                                                                                            | Secondary                                    | Skip                                       |
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------ |
 | Local code change                                    | `serena` (navigate) + native edit/shell                                                            | `git` (diff, status)                         | github, exa, firecrawl, playwright, vercel |
+| File or content search in the working tree           | `fff` (`grep`, `find_files`, `multi_grep`)                                                         | native `grep` / `glob` for exact patterns    | serena, context7, exa                      |
 | Understanding an unfamiliar module                   | `serena` (`get_symbols_overview` → `find_symbol`)                                                  | native `read` for prose/config               | all web servers                            |
 | Documentation research (library API)                 | `context7`                                                                                         | `exa.web_fetch_exa` for the official page    | firecrawl crawling/monitoring              |
 | Upstream, issue or PR investigation                  | `github`                                                                                           | `firecrawl.developer_search` for public code | `git` (local only)                         |
@@ -181,6 +193,27 @@ information the first cannot provide. Never call a server "to be thorough".
   save tokens. If a shortcut would hide an API contract, a dependency, an error path or
   an edge case, take the larger read.
 
+### Context Mode — when it earns its overhead
+
+`context-mode` is optional, not automatic. Use it when the payload is bulky **and** you
+need an aggregate, a count, or a later query — never to dodge reading something you are
+about to edit.
+
+| Bulky payload                                                          | Tool                                                          |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------- |
+| A command or search whose output is huge (build, test, log, wide grep) | `ctx_execute` — filter in code, print only the answer         |
+| One large file, and you need a fact from it                            | `ctx_execute_file` — derive over `FILE_CONTENT`               |
+| Several commands you will query more than once                         | `ctx_batch_execute` with `queries` — index and answer at once |
+| A page or spec you will reference repeatedly                           | `ctx_fetch_and_index`, then `ctx_search`                      |
+
+**Keep it inline when** the target is small — a file you are about to edit, a single
+symbol, one command with a short output. The sandbox round trip then costs more than
+the bytes it saves.
+
+**Fidelity.** Context Mode summarises; it does not replace the source. Never take a
+type, signature, error message, field name or line reference from a summary — read the
+exact code before implementing against it, and keep the summary only as a map.
+
 ---
 
 ## 5. Project engineering rules
@@ -192,16 +225,21 @@ Hand-written sources:
 - `nodes/Coolify/Coolify.node.ts` — the node class: the resource selector, the
   assembled `properties` and `execute()`, which maps the selected operation to a
   request and returns the parsed response body.
-- `nodes/Coolify/descriptions/ApplicationDescription.ts` — the description of the
-  `Applications` resource: the operation selector plus one field section per
-  operation. `descriptions/index.ts` re-exports it.
-- `nodes/Coolify/descriptions/applicationCreateFields.ts` — renders the field
-  contract of the creation endpoints as editor fields.
+- `nodes/Coolify/descriptions/Application/ApplicationDescription.ts` — the
+  description of the `Applications` resource: the operation selector plus one
+  field section per operation. `descriptions/index.ts` re-exports it.
+- `nodes/Coolify/descriptions/Application/applicationCreateFields.ts` — renders
+  the field contract of the creation endpoints as editor fields.
+- `nodes/Coolify/descriptions/Application/storageBackupScheduleFields.ts` —
+  renders the field contract of the storage backup schedule as editor fields.
+  `descriptions/Application/index.ts` re-exports the description modules.
 - `nodes/Coolify/requests/application/<operation>.ts` — one request builder per
   operation. `requests/application/index.ts` holds the operation → builder
   registry, `requests/application/parameters.ts` the shared parameter
   validation, `requests/application/applicationFields.ts` the field contract of
-  the creation endpoints. `requests/types.ts` holds the `CoolifyRequest` shape.
+  the creation endpoints, `requests/application/storageBackupScheduleFields.ts`
+  the field contract of the storage backup schedule. `requests/types.ts` holds
+  the `CoolifyRequest` shape.
 - `nodes/Coolify/shared/apiRequest.ts` — the single authenticated transport.
 - `nodes/Coolify/shared/rateLimit.ts` — the retry / rate-limit policy, deliberately free
   of `n8n-workflow` imports so it can be unit-tested in isolation.
@@ -340,10 +378,17 @@ shaping, the retry policy and the error surface are implemented exactly once, th
 - A field is sent only when the user set it: a text field when it is not empty,
   a list when it has entries, a number when it is a number.
 - A boolean is sent when it is switched on. A boolean whose **API default is
-  `true`** is always sent, so the user can switch it off explicitly. Record
+  `true`** carries that default in the editor and is sent when the user
+  switched it off, so the user can turn the feature off explicitly. Record
   that default on the field.
 - A field of a `collection` parameter is sent only when the user added the
-  item — an untouched collection is absent from the request.
+  item - an untouched collection is absent from the request, and the API
+  applies its own default to the fields the user left out. The control of
+  such a field therefore has to carry the default of the API, so an item the
+  user adds without touching it holds the value the API would use.
+- The update operation is the exception: a field it leaves out keeps the
+  current value of the application and not the default of the API, so its
+  booleans and enumerations are a three-state selector.
 - Never send an empty string, an empty list or an invented default to "fill"
   the body.
 - A destructive operation states its effect in the operation description and
@@ -405,6 +450,19 @@ description; read them before writing one:
 - The **parity test** in `test/applicationDescription.test.ts` is authoritative: the
   operation values of the description and the keys of `applicationRequestBuilders`
   must be the same set. Extend it when an operation is added; never weaken it.
+- The **editor state tests** in `test/applicationDescription.test.ts` evaluate the
+  display options with the display logic of n8n itself
+  (`NodeHelpers.displayParameter`), not with a hand written approximation. They
+  assert that no field is shown twice in a state of the editor, that a creation
+  variant shows the fields of its own contract only, and that the editor shows
+  exactly the fields a request sends. Extend them when a field or a variant is
+  added; never weaken them.
+- A field of a creation variant is rendered once per variant, so the same
+  property name can occur several times in the description. The copies are
+  mutually exclusive through `displayOptions.show.operation`, and n8n keeps
+  them apart, so they are not a duplicate. Keep the order of the fields of a
+  variant, and merge the fields of the variants only when the order of every
+  variant stays the same.
 - Gaps — do not assume coverage: the credential module, the node class itself, and any
   end-to-end path through a real n8n runtime are untested. A change in those areas needs
   a new test; a change to shared policy needs the mirrored suite updated.

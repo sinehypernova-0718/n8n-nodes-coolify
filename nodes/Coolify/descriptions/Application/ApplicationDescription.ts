@@ -2,6 +2,7 @@ import type { INodeProperties } from 'n8n-workflow';
 
 import { applicationCreateDescription } from './applicationCreateFields';
 import { applicationUpdateDescription } from './applicationUpdateFields';
+import { storageBackupScheduleDescription } from './storageBackupScheduleFields';
 
 /**
  * Description of the Coolify application resource.
@@ -38,31 +39,31 @@ export const applicationFields: INodeProperties[] = [
 				name: 'Create (Docker Image Without Git)',
 				value: 'createDockerImage',
 				description: 'Create a new application from a prebuilt Docker image',
-				action: 'Create an application',
+				action: 'Create an application from a container image',
 			},
 			{
 				name: 'Create (Dockerfile Without Git)',
 				value: 'createDockerfile',
 				description: 'Create a new application from a Dockerfile',
-				action: 'Create an application',
+				action: 'Create an application from a dockerfile',
 			},
 			{
 				name: 'Create (Private - Deploy Key)',
 				value: 'createPrivateDeployKey',
 				description: 'Create a new application from a private repository through a deploy key',
-				action: 'Create an application',
+				action: 'Create an application from a private repository with a deploy key',
 			},
 			{
 				name: 'Create (Private - GH App)',
 				value: 'createPrivateGithubApp',
 				description: 'Create a new application from a private repository through a GitHub App',
-				action: 'Create an application',
+				action: 'Create an application from a private repository with an installed app',
 			},
 			{
 				name: 'Create (Public)',
 				value: 'createPublic',
 				description: 'Create a new application from a public Git repository',
-				action: 'Create an application',
+				action: 'Create an application from a public repository',
 			},
 			{
 				name: 'Create Env',
@@ -269,7 +270,7 @@ export const applicationFields: INodeProperties[] = [
 				name: 'Update Envs (Bulk)',
 				value: 'updateEnvsBulk',
 				description: 'Update several environment variables of an application at once',
-				action: 'Update environment variables',
+				action: 'Update several environment variables at once',
 			},
 			{
 				name: 'Update Preview Domains',
@@ -1521,215 +1522,7 @@ export const applicationFields: INodeProperties[] = [
 		description:
 			'Schedule of the backup as a cron or a human expression, Coolify validates the expression',
 	},
-	{
-		displayName: 'Enabled',
-		name: 'enabled',
-		type: 'boolean',
-		default: true,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-			},
-		},
-		description: 'Whether the backup schedule is enabled',
-	},
-	{
-		displayName: 'Save To S3',
-		name: 'saveS3',
-		type: 'boolean',
-		default: false,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-			},
-		},
-		description: 'Whether the backups are also stored in an S3 storage',
-	},
-	{
-		displayName: 'S3 Storage UUID',
-		name: 's3StorageUuid',
-		type: 'string',
-		default: '',
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-				saveS3: [true],
-			},
-		},
-		description: 'UUID of the S3 storage the backups are written to',
-	},
-	{
-		displayName: 'Disable Local Backup',
-		name: 'disableLocalBackup',
-		type: 'boolean',
-		default: false,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-				saveS3: [true],
-			},
-		},
-		description:
-			'Whether the local backups are skipped when the backups are stored in an S3 storage',
-	},
-	{
-		displayName: 'Stop During Backup',
-		name: 'stopDuringBackup',
-		type: 'boolean',
-		default: false,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-			},
-		},
-		description:
-			'Whether the containers of the application are stopped during the backup. Needs a token with the deploy ability.',
-	},
-	{
-		displayName: 'Retention Amount Locally',
-		name: 'retentionAmountLocally',
-		type: 'number',
-		typeOptions: {
-			minValue: 0,
-			maxValue: 10_000,
-		},
-		default: 7,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-			},
-		},
-		description: 'Number of local backups that are kept',
-	},
-	{
-		displayName: 'Retention Days Locally',
-		name: 'retentionDaysLocally',
-		type: 'number',
-		typeOptions: {
-			minValue: 0,
-			maxValue: 2_147_483_647,
-		},
-		default: 0,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-			},
-		},
-		description: 'Number of days a local backup is kept',
-	},
-	{
-		displayName: 'Retention Max Storage Locally',
-		name: 'retentionMaxStorageLocally',
-		type: 'number',
-		typeOptions: {
-			minValue: 0,
-			maxValue: 9_999_999_999,
-			numberPrecision: 2,
-		},
-		default: 0,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-			},
-		},
-		description: 'Maximum size of the local backups in bytes, zero means no limit',
-	},
-	{
-		displayName: 'Retention Amount S3',
-		name: 'retentionAmountS3',
-		type: 'number',
-		typeOptions: {
-			minValue: 0,
-			maxValue: 10_000,
-		},
-		default: 7,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-			},
-		},
-		description: 'Number of S3 backups that are kept',
-	},
-	{
-		displayName: 'Retention Days S3',
-		name: 'retentionDaysS3',
-		type: 'number',
-		typeOptions: {
-			minValue: 0,
-			maxValue: 2_147_483_647,
-		},
-		default: 0,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-			},
-		},
-		description: 'Number of days an S3 backup is kept',
-	},
-	{
-		displayName: 'Retention Max Storage S3',
-		name: 'retentionMaxStorageS3',
-		type: 'number',
-		typeOptions: {
-			minValue: 0,
-			maxValue: 9_999_999_999,
-			numberPrecision: 2,
-		},
-		default: 0,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-			},
-		},
-		description: 'Maximum size of the S3 backups in bytes, zero means no limit',
-	},
-	{
-		displayName: 'Timeout',
-		name: 'timeout',
-		type: 'number',
-		typeOptions: {
-			minValue: 60,
-			maxValue: 36_000,
-		},
-		default: 36_000,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-			},
-		},
-		description:
-			'Time in seconds after which a running backup is stopped. The value is always sent, so it is set to the value shown here on every request.',
-	},
-	{
-		displayName: 'Missing Backup Notification Days',
-		name: 'missingBackupNotificationDays',
-		type: 'number',
-		typeOptions: {
-			minValue: 0,
-			maxValue: 365,
-		},
-		default: 0,
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['setStorageBackupSchedule'],
-			},
-		},
-		description:
-			'Number of days without a backup before an alert is raised, zero disables the alert. The value is always sent, so it is set to the value shown here on every request.',
-	},
+	...storageBackupScheduleDescription(),
 
 	// ----------------------------------
 	// application:deleteStorageBackupSchedule

@@ -1,1 +1,1 @@
-export { applicationFields } from './ApplicationDescription';
+export { applicationFields } from './Application';

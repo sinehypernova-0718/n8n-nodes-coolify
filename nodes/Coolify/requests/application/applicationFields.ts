@@ -79,9 +79,10 @@ export type ApplicationFieldGroup =
  * The groups that the editor renders as a collection of optional fields.
  */
 export const APPLICATION_FIELD_COLLECTIONS: Record<
-	Exclude<ApplicationFieldGroup, 'identity' | 'source' | 'common'>,
+	Exclude<ApplicationFieldGroup, 'identity' | 'source'>,
 	string
 > = {
+	common: 'applicationSettings',
 	deployment: 'deploymentSettings',
 	build: 'buildSettings',
 	gitBuild: 'gitBuildSettings',
@@ -117,8 +118,17 @@ export interface ApplicationFieldSpec {
 	required?: boolean;
 	/**
 	 * The default of the field in the Coolify API, for the boolean fields whose
-	 * default is `true`. Those fields are always sent, so the user can switch
-	 * them off explicitly.
+	 * default is `true`.
+	 *
+	 * The API applies its default to the fields a request leaves out. The
+	 * controller of the creation endpoints reads `autogenerate_domain` with a
+	 * default of `true`, and it writes the settings of an application only
+	 * when the request carries them, so a field the node does not send keeps
+	 * the default of the API.
+	 *
+	 * The editor control carries that default as well, so an item the user
+	 * adds to a collection without touching it holds the value the API would
+	 * use, and switching it off sends `false`.
 	 */
 	apiDefault?: boolean;
 	/** Whether the value of the field is a secret. */
@@ -876,7 +886,7 @@ const SOURCE_FIELDS: Record<ApplicationCreateVariant, ApplicationFieldSpec[]> = 
 /**
  * A group of fields and the variants that accept them.
  */
-interface ApplicationFieldGroupSpec {
+export interface ApplicationFieldGroupSpec {
 	group: ApplicationFieldGroup;
 	variants: ApplicationCreateVariant[];
 	fields: ApplicationFieldSpec[];
@@ -988,11 +998,97 @@ export function applicationCollectionGroups(
 ): ApplicationFieldGroupSpec[] {
 	return FIELD_GROUPS.filter(
 		(group) =>
-			group.group !== 'identity' &&
-			group.group !== 'source' &&
-			group.group !== 'common' &&
-			group.variants.includes(variant),
+			group.group !== 'identity' && group.group !== 'source' && group.variants.includes(variant),
 	);
+}
+
+/**
+ * The groups the editor renders as a collection, over every variant.
+ *
+ * A group belongs to the variants that accept it, so the editor has to render
+ * the groups of every variant and not only the groups of one variant. A group
+ * that only a later variant accepts would be missing from the editor otherwise,
+ * and its fields would be sent without ever being shown.
+ *
+ * @returns The groups that at least one variant accepts.
+ */
+export function applicationCollectionGroupsOfEveryVariant(): ApplicationFieldGroupSpec[] {
+	const groups = new Map<ApplicationFieldGroup, ApplicationFieldGroupSpec>();
+
+	for (const variant of APPLICATION_CREATE_VARIANTS) {
+		for (const group of applicationCollectionGroups(variant)) {
+			if (groups.has(group.group)) {
+				continue;
+			}
+
+			groups.set(group.group, group);
+		}
+	}
+
+	return [...groups.values()];
+}
+
+/**
+ * The fields of a group, over every variant that accepts the group.
+ *
+ * The editor renders the fields of a group once, for every variant that
+ * accepts the group, so the fields of all those variants belong to the group.
+ * A field that only one variant of the group accepts is rendered for the whole
+ * group, and the request builder of a variant that does not accept it leaves
+ * it out of the request.
+ *
+ * @param group The group of the fields.
+ * @returns The fields of the group.
+ */
+export function applicationGroupFieldSpecs(
+	group: ApplicationFieldGroup,
+): ApplicationGroupedFieldSpec[] {
+	const specs: ApplicationGroupedFieldSpec[] = [];
+	const seen = new Set<string>();
+
+	for (const variant of APPLICATION_CREATE_VARIANTS) {
+		for (const spec of applicationFieldSpecs(variant)) {
+			if (spec.group !== group || seen.has(spec.apiName)) {
+				continue;
+			}
+
+			seen.add(spec.apiName);
+			specs.push(spec);
+		}
+	}
+
+	return specs;
+}
+
+/**
+ * The fields every variant accepts at the top level of the editor.
+ *
+ * Only the identity fields are rendered at the top level, so the editor shows
+ * where the application lives and nothing else. Every optional field of a
+ * variant is rendered as a collection, so the top level of the editor holds
+ * the inputs of the variant and nothing more.
+ *
+ * @returns The shared fields of the creation variants.
+ */
+export function applicationSharedFieldSpecs(): ApplicationGroupedFieldSpec[] {
+	const specs: ApplicationGroupedFieldSpec[] = [];
+	const seen = new Set<string>();
+
+	for (const variant of APPLICATION_CREATE_VARIANTS) {
+		for (const spec of applicationFieldSpecs(variant)) {
+			if (spec.group !== 'identity') {
+				continue;
+			}
+			if (seen.has(spec.apiName)) {
+				continue;
+			}
+
+			seen.add(spec.apiName);
+			specs.push(spec);
+		}
+	}
+
+	return specs;
 }
 
 /**
@@ -1001,8 +1097,9 @@ export function applicationCollectionGroups(
  * A field is only sent when the user set it:
  *
  * - a text field is sent when it is not empty,
- * - a boolean field is sent when it is switched on, and always when the API
- *   defaults it to `true`, so the user can switch it off explicitly,
+ * - a boolean field is sent when it is switched on, and also when it is
+ *   switched off and the API defaults it to `true`, so the user can switch it
+ *   off explicitly,
  * - a number field and a list of strings are sent when they are not empty,
  * - a collection of domains is sent when it has entries.
  *
