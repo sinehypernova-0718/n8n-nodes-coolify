@@ -10,8 +10,12 @@ import {
 	type INodeTypeDescription,
 } from 'n8n-workflow';
 
-import { applicationFields } from './descriptions';
-import { applicationRequestBuilders } from './requests';
+import { applicationFields, auditEventFields } from './descriptions';
+import {
+	applicationRequestBuilders,
+	auditEventRequestBuilders,
+	type CoolifyRequestBuilder,
+} from './requests';
 import { coolifyApiRequest } from './shared/apiRequest';
 
 /**
@@ -41,6 +45,27 @@ function asNodeError(
 	return new NodeOperationError(node, error as Error, { itemIndex });
 }
 
+/**
+ * The request builder registries of the resources, keyed by the value of the
+ * resource parameter.
+ *
+ * Every resource resolves to the registry of its own operations, so an
+ * operation value of one resource can never dispatch the request of another.
+ */
+const resourceRequestBuilders: Record<string, Record<string, CoolifyRequestBuilder>> = {
+	application: applicationRequestBuilders,
+	auditEvent: auditEventRequestBuilders,
+};
+
+/**
+ * Display label of a resource, used in the error message of an operation the
+ * resource does not implement.
+ */
+const resourceLabels: Record<string, string> = {
+	application: 'Application',
+	auditEvent: 'Audit Event',
+};
+
 export class Coolify implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Coolify',
@@ -53,7 +78,7 @@ export class Coolify implements INodeType {
 		version: 1,
 		subtitle: '={{$parameter["operation"]}}',
 		description:
-			'Manage Coolify applications, services, databases, servers and deployments from your n8n workflows.',
+			'Manage Coolify applications, services, databases, servers, deployments and audit events from your n8n workflows.',
 		defaults: {
 			name: 'Coolify',
 		},
@@ -78,10 +103,16 @@ export class Coolify implements INodeType {
 						value: 'application',
 						description: 'Manage the applications of a Coolify team',
 					},
+					{
+						name: 'Audit Event',
+						value: 'auditEvent',
+						description: 'List the audit events of a Coolify team',
+					},
 				],
 				default: 'application',
 			},
 			...applicationFields,
+			...auditEventFields,
 		],
 	};
 
@@ -91,13 +122,23 @@ export class Coolify implements INodeType {
 
 		for (let i = 0; i < items.length; i++) {
 			try {
+				const resource = this.getNodeParameter('resource', i) as string;
 				const operation = this.getNodeParameter('operation', i) as string;
 
-				const buildRequest = applicationRequestBuilders[operation];
+				const requestBuilders = resourceRequestBuilders[resource];
+				if (!requestBuilders) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`The resource "${resource}" is not implemented yet`,
+						{ itemIndex: i },
+					);
+				}
+
+				const buildRequest = requestBuilders[operation];
 				if (!buildRequest) {
 					throw new NodeOperationError(
 						this.getNode(),
-						`The Application operation "${operation}" is not implemented yet`,
+						`The ${resourceLabels[resource] ?? resource} operation "${operation}" is not implemented yet`,
 						{ itemIndex: i },
 					);
 				}

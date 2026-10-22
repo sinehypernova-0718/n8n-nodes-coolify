@@ -22,6 +22,7 @@
 - **API token authentication** — authorize API requests with a Coolify API token sent as a bearer token.
 - **Native n8n interface** — select resources, operations, and parameters through the workflow editor.
 - **Application management** — 42 operations on the `Application` resource, including creation, lifecycle, environment variables, storages, backups, destinations, and tags.
+- **Audit events** — list the team audit events on the `Audit Event` resource, paginated and filterable.
 - **Preview deployments** — open, list, inspect, and delete preview deployments for pull requests.
 - **Rate-limit aware transport** — one shared transport that honours the server's rate-limit headers and retries only requests that are safe to repeat.
 
@@ -100,7 +101,7 @@ The Coolify node exposes the supported Coolify API operations through n8n's reso
 
 ### Application
 
-The node exposes one resource — **Application** — with 42 operations. The other Coolify resources (services, databases, servers, projects, deployments) are not exposed yet.
+The node exposes two resources — **Application**, with 42 operations, and **Audit Event**, with the List operation. The other Coolify resources (services, databases, servers, projects, deployments) are not exposed yet.
 
 Every operation is sent through the shared transport, so the rate limit and retry policy described below applies to all of them: reads are retried when the server reports a transient failure, writes are never repeated automatically.
 
@@ -207,6 +208,16 @@ Every operation is sent through the shared transport, so the rate limit and retr
 | `Delete`   | Delete an application by UUID                                                                          |
 
 > **Note:** `Migrate` is only available on a development instance of Coolify, the API answers HTTP 404 on a production instance. `Rollback` needs a token with the `deploy` ability. `Delete` removes the configuration and the volumes of the application as well, the switches of the operation control that.
+
+### Audit Event
+
+#### Reading audit events
+
+| Operation | Description                                                                              |
+| --------- | ---------------------------------------------------------------------------------------- |
+| `List`    | List one page of the audit events of the team, newest first, with pagination and filters |
+
+> **Note:** the response is one page in the pagination format of Coolify, not a flat list. Only team admins and owners can view audit events, a token without that access is expected to receive HTTP 403. Actor e-mail, token, metadata, changes, IP address and user agent are returned only for tokens with the `read:sensitive` or the `root` ability.
 
 Operation parameters, filters, and available fields vary by endpoint. Refer to the operation descriptions in the n8n editor and the [Coolify API documentation](https://coolify.io/docs/api/overview) for endpoint-specific requirements.
 

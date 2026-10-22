@@ -1,5 +1,3 @@
-import { type IExecuteFunctions } from 'n8n-workflow';
-
 import { addDestinationRequest } from './addDestination';
 import { cloneApplicationRequest } from './clone';
 import { createDockerfileApplicationRequest } from './createDockerfile';
@@ -42,7 +40,7 @@ import { updateEnvsBulkRequest } from './updateEnvsBulk';
 import { updateEnvRequest } from './updateEnv';
 import { updatePreviewDomainsRequest } from './updatePreviewDomains';
 import { updateStorageRequest } from './updateStorage';
-import type { CoolifyRequest } from '../types';
+import type { CoolifyRequestBuilder } from '../types';
 
 /**
  * The request builder of every application operation.
@@ -50,10 +48,7 @@ import type { CoolifyRequest } from '../types';
  * The map is the single place that maps an operation to its endpoint, so the
  * description of an operation and its request can never drift apart.
  */
-export const applicationRequestBuilders: Record<
-	string,
-	(this: IExecuteFunctions, itemIndex: number) => Promise<CoolifyRequest>
-> = {
+export const applicationRequestBuilders: Record<string, CoolifyRequestBuilder> = {
 	addDestination: addDestinationRequest,
 	clone: cloneApplicationRequest,
 	createDockerfile: createDockerfileApplicationRequest,

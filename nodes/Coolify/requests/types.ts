@@ -1,4 +1,4 @@
-import type { IDataObject, IHttpRequestMethods } from 'n8n-workflow';
+import type { IExecuteFunctions, IDataObject, IHttpRequestMethods } from 'n8n-workflow';
 
 import type { RetrySafety } from '../shared/rateLimit';
 
@@ -27,3 +27,15 @@ export interface CoolifyRequest {
 	 */
 	retrySafety?: RetrySafety;
 }
+
+/**
+ * A request builder of a resource.
+ *
+ * The signature that every entry of a resource-level registry implements, so
+ * the description of an operation and its request resolve through the same
+ * map.
+ */
+export type CoolifyRequestBuilder = (
+	this: IExecuteFunctions,
+	itemIndex: number,
+) => Promise<CoolifyRequest>;

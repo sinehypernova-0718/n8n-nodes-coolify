@@ -129,11 +129,14 @@ function operationValues(): string[] {
 }
 
 describe('Coolify node description', () => {
-	it('exposes exactly one resource', () => {
+	it('exposes exactly the resources Application and Audit Event', () => {
 		const resources = properties.filter((entry) => entry.name === 'resource');
 
 		expect(resources).toHaveLength(1);
-		expect(resources[0].options).toHaveLength(1);
+		expect((resources[0].options ?? []).map((option) => String(option.value))).toEqual([
+			'application',
+			'auditEvent',
+		]);
 	});
 
 	it('offers only the operations that have a request builder', () => {

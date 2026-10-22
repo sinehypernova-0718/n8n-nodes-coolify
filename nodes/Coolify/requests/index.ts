@@ -43,4 +43,5 @@ export {
 	updatePreviewDomainsRequest,
 	updateStorageRequest,
 } from './application';
-export type { CoolifyRequest } from './types';
+export { auditEventRequestBuilders, listAuditEventsRequest } from './auditEvent';
+export type { CoolifyRequest, CoolifyRequestBuilder } from './types';
