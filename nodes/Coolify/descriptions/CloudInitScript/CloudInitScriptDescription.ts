@@ -30,7 +30,7 @@ export const cloudInitScriptFields: INodeProperties[] = [
 				name: 'Create',
 				value: 'create',
 				description:
-					'Create a new cloud init script for the team. The content has to be a bash script starting with #! or cloud-config YAML. Only team admins and owners can create scripts, a token without that access is expected to receive HTTP 403.',
+					'Create a new cloud init script for the team. The content has to be a bash script starting with #! or cloud-config YAML, the API stores it without its leading and trailing whitespace. Only team admins and owners can create scripts, a token without that access is expected to receive HTTP 403.',
 				action: 'Create a cloud init script',
 			},
 			{
@@ -58,7 +58,7 @@ export const cloudInitScriptFields: INodeProperties[] = [
 				name: 'Update',
 				value: 'update',
 				description:
-					'Update a cloud init script by UUID. Only the fields that are filled in are changed, every other field keeps its current value. Only team admins and owners can update scripts, a token without that access is expected to receive HTTP 403.',
+					'Update a cloud init script by UUID. Only the fields that are filled in are changed, every other field keeps its current value. A field cannot be cleared, a blank value would be answered with HTTP 422. Only team admins and owners can update scripts, a token without that access is expected to receive HTTP 403.',
 				action: 'Update a cloud init script',
 			},
 		],

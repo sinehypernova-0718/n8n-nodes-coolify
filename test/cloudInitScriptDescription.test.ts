@@ -137,6 +137,28 @@ describe('Coolify node description of the cloud init script resource', () => {
 		expect(warning.displayOptions?.show?.operation).toEqual(['delete']);
 	});
 
+	it('documents the verified empty-field semantics in the update description', () => {
+		const description = String(
+			(cloudInitScriptParameter('operation').options ?? []).find(
+				(option) => option.value === 'update',
+			)?.description,
+		);
+
+		expect(description).toMatch(/keeps its current value/);
+		expect(description).toMatch(/cannot be cleared/);
+		expect(description).toMatch(/422/);
+	});
+
+	it('documents the whitespace the API itself removes in the create description', () => {
+		const description = String(
+			(cloudInitScriptParameter('operation').options ?? []).find(
+				(option) => option.value === 'create',
+			)?.description,
+		);
+
+		expect(description).toMatch(/leading and trailing whitespace/);
+	});
+
 	it('gives every parameter a default', () => {
 		for (const parameter of cloudInitScriptParameters()) {
 			expect(parameter.default).toBeDefined();

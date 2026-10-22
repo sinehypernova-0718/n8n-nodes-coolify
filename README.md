@@ -232,7 +232,7 @@ Every operation is sent through the shared transport, so the rate limit and retr
 | `Update`  | Update a cloud init script by UUID, only the fields that are filled in are changed |
 | `Delete`  | Delete a cloud init script by UUID, the deletion is permanent                      |
 
-> **Note:** the list endpoint is not paginated, it returns every script of the team. Only team admins and owners can use the resource, a token without that access is expected to receive HTTP 403. The content of a script is returned only for tokens with the `read:sensitive` or the `root` ability, and `Update` sends only the fields that are filled in, so an emptied field keeps the value the script currently has.
+> **Note:** the list endpoint is not paginated, it returns every script of the team. Only team admins and owners can use the resource, a token without that access is expected to receive HTTP 403. The content of a script is returned only for a token with the `read:sensitive` or the `root` ability that also satisfies the team authorization policy of Coolify, in practice the caller has to be an admin or owner of the team; a token ability on its own does not make the content visible. `Update` changes only the fields that are filled in, an emptied field keeps the value the script has, the API has no way to clear a field and rejects a blank value with HTTP 422. The API stores the content of a script without its leading and trailing whitespace. `Delete` removes the script permanently.
 
 Operation parameters, filters, and available fields vary by endpoint. Refer to the operation descriptions in the n8n editor and the [Coolify API documentation](https://coolify.io/docs/api/overview) for endpoint-specific requirements.
 

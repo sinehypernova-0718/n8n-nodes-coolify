@@ -77,13 +77,40 @@ describe('cloud init script request builders', () => {
 			expect(request.retrySafety).toBeUndefined();
 		});
 
-		it('trims the name and the script before they are sent', async () => {
+		it('sends the name trimmed and the script exactly as the user wrote it', async () => {
+			// The content of a script is preserved byte for byte: the node does
+			// not trim, normalize or reserialize it. The Coolify API server
+			// trims every string of a request itself, so what is lost at the
+			// edge is never the node's doing.
 			const request = await createCloudInitScriptRequest.call(
 				createContext({ name: '  First Boot  ', script: ' #cloud-config\nruncmd: []\n' }),
 				0,
 			);
 
-			expect(request.body).toEqual({ name: 'First Boot', script: '#cloud-config\nruncmd: []' });
+			expect(request.body).toEqual({ name: 'First Boot', script: ' #cloud-config\nruncmd: []\n' });
+		});
+
+		it('preserves the leading and trailing newlines of a bash script', async () => {
+			const script = '\n#!/bin/sh\nset -e\ndnf update -y\n';
+
+			const request = await createCloudInitScriptRequest.call(
+				createContext({ name: 'Docker First Boot', script }),
+				0,
+			);
+
+			expect(request.body).toEqual({ name: 'Docker First Boot', script });
+		});
+
+		it('preserves the indentation and the blank lines of a cloud-config document', async () => {
+			const script =
+				'#cloud-config\n\npackages:\n  - docker\n\nwrite_files:\n    - path: /opt/hello.txt\n';
+
+			const request = await createCloudInitScriptRequest.call(
+				createContext({ name: 'Docker First Boot', script }),
+				0,
+			);
+
+			expect(request.body).toEqual({ name: 'Docker First Boot', script });
 		});
 
 		it('sends nothing but the name and the script, because the API rejects other fields', async () => {
@@ -104,6 +131,15 @@ describe('cloud init script request builders', () => {
 		it('fails when the script is missing', async () => {
 			await expect(
 				createCloudInitScriptRequest.call(createContext({ name: 'First Boot' }), 0),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('fails when the script is blank', async () => {
+			await expect(
+				createCloudInitScriptRequest.call(
+					createContext({ name: 'First Boot', script: '   \n\t ' }),
+					0,
+				),
 			).rejects.toThrowError(NodeOperationError);
 		});
 
@@ -188,7 +224,34 @@ describe('cloud init script request builders', () => {
 			expect(request.body).toEqual({ name: 'Renamed' });
 		});
 
-		it('never sends an emptied field as an empty string, because the API would accept the wipe', async () => {
+		it('sends a nonblank script exactly as the user wrote it', async () => {
+			// The Coolify API server trims every string itself, so the node
+			// does not trim the content; the exact value reaches the body.
+			const script = '\n\n#cloud-config\n\npackages:\n  - docker\n\n';
+
+			const request = await updateCloudInitScriptRequest.call(
+				createContext({ cloudInitScriptUuid: 'abc123', script }),
+				0,
+			);
+
+			expect(request.body).toEqual({ script });
+		});
+
+		it('never sends a blank field, because the API would reject it with HTTP 422', async () => {
+			// The upstream middleware turns the blank string into null and the
+			// string rules of the endpoint are not nullable, so a blank field
+			// in the body is rejected; and the n8n editor cannot distinguish a
+			// cleared field from an untouched one either. A blank field is
+			// therefore omitted, and the value it omits keeps the current value.
+			const request = await updateCloudInitScriptRequest.call(
+				createContext({ cloudInitScriptUuid: 'abc123', name: '   ', script: '#!/bin/sh' }),
+				0,
+			);
+
+			expect(request.body).toEqual({ script: '#!/bin/sh' });
+		});
+
+		it('treats blank fields like untouched ones, so an update with nothing but blanks is refused', async () => {
 			await expect(
 				updateCloudInitScriptRequest.call(
 					createContext({ cloudInitScriptUuid: 'abc123', name: '   ', script: '   ' }),
