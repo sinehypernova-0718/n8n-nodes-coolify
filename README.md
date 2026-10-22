@@ -391,7 +391,16 @@ Releases are published by GitHub Actions, never from a local machine, so that ev
 
 ## 📝 Version history
 
-_First version of the node is yet to be released._
+### v0.1.0
+
+Initial pre-1.0 release of the Coolify integration for n8n.
+
+Introduces Application and Audit Event resources.
+Adds Coolify API token authentication for API requests.
+Includes application creation, lifecycle, environment variables, storages, backups, destinations, tags, preview deployments, and logs operations.
+Includes audit event listing with pagination.
+Includes rate-limit aware transport and operation-specific request handling where implemented.
+This release establishes the initial integration structure, with further Coolify resources and operations available for future development.
 
 ## 📄 License
 
