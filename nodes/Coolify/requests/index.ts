@@ -44,4 +44,22 @@ export {
 	updateStorageRequest,
 } from './application';
 export { auditEventRequestBuilders, listAuditEventsRequest } from './auditEvent';
+export {
+	buildCreateCloudInitScriptBody,
+	buildUpdateCloudInitScriptBody,
+	cloudInitScriptFieldProperty,
+	cloudInitScriptFieldSpecs,
+	cloudInitScriptRequestBuilders,
+	createCloudInitScriptRequest,
+	deleteCloudInitScriptRequest,
+	getCloudInitScriptRequest,
+	listCloudInitScriptsRequest,
+	readCloudInitScriptContent,
+	readCloudInitScriptName,
+	requireCloudInitScriptUuid,
+	updateCloudInitScriptRequest,
+	CLOUD_INIT_SCRIPT_FIELDS,
+	CLOUD_INIT_SCRIPT_NAME_MAX_LENGTH,
+	type CloudInitScriptFieldSpec,
+} from './cloudInitScript';
 export type { CoolifyRequest, CoolifyRequestBuilder } from './types';

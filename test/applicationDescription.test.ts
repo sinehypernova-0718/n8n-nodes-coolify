@@ -129,13 +129,14 @@ function operationValues(): string[] {
 }
 
 describe('Coolify node description', () => {
-	it('exposes exactly the resources Application and Audit Event', () => {
+	it('exposes exactly the resources Application, Audit Event and Cloud Init Script', () => {
 		const resources = properties.filter((entry) => entry.name === 'resource');
 
 		expect(resources).toHaveLength(1);
 		expect((resources[0].options ?? []).map((option) => String(option.value))).toEqual([
 			'application',
 			'auditEvent',
+			'cloudInitScript',
 		]);
 	});
 
@@ -309,6 +310,14 @@ describe('Coolify node description', () => {
 		const shown = properties
 			.filter((parameter) =>
 				(parameter.displayOptions?.show?.operation as string[] | undefined)?.includes('update'),
+			)
+			.filter(
+				// The operation values are scoped to the resource, so the update
+				// fields of another resource are not part of this contract.
+				(parameter) =>
+					!(parameter.displayOptions?.show?.resource as string[] | undefined)?.includes(
+						'cloudInitScript',
+					),
 			)
 			.flatMap((parameter) =>
 				parameter.type === 'collection'

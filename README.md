@@ -23,6 +23,7 @@
 - **Native n8n interface** — select resources, operations, and parameters through the workflow editor.
 - **Application management** — 42 operations on the `Application` resource, including creation, lifecycle, environment variables, storages, backups, destinations, and tags.
 - **Audit events** — list the team audit events on the `Audit Event` resource, paginated and filterable.
+- **Cloud init scripts** — create, read, update, and delete the reusable cloud init scripts of the team on the `Cloud Init Script` resource.
 - **Preview deployments** — open, list, inspect, and delete preview deployments for pull requests.
 - **Rate-limit aware transport** — one shared transport that honours the server's rate-limit headers and retries only requests that are safe to repeat.
 
@@ -101,7 +102,7 @@ The Coolify node exposes the supported Coolify API operations through n8n's reso
 
 ### Application
 
-The node exposes two resources — **Application**, with 42 operations, and **Audit Event**, with the List operation. The other Coolify resources (services, databases, servers, projects, deployments) are not exposed yet.
+The node exposes three resources — **Application**, with 42 operations, **Audit Event**, with the List operation, and **Cloud Init Script**, with 5 operations. The other Coolify resources (services, databases, servers, projects, deployments) are not exposed yet.
 
 Every operation is sent through the shared transport, so the rate limit and retry policy described below applies to all of them: reads are retried when the server reports a transient failure, writes are never repeated automatically.
 
@@ -218,6 +219,20 @@ Every operation is sent through the shared transport, so the rate limit and retr
 | `List`    | List one page of the audit events of the team, newest first, with pagination and filters |
 
 > **Note:** the response is one page in the pagination format of Coolify, not a flat list. Only team admins and owners can view audit events, a token without that access is expected to receive HTTP 403. Actor e-mail, token, metadata, changes, IP address and user agent are returned only for tokens with the `read:sensitive` or the `root` ability.
+
+### Cloud Init Script
+
+#### Managing cloud init scripts
+
+| Operation | Description                                                                        |
+| --------- | ---------------------------------------------------------------------------------- |
+| `List`    | List the cloud init scripts of the team, newest first                              |
+| `Get`     | Get a cloud init script by UUID                                                    |
+| `Create`  | Create a cloud init script with a name and its content                             |
+| `Update`  | Update a cloud init script by UUID, only the fields that are filled in are changed |
+| `Delete`  | Delete a cloud init script by UUID, the deletion is permanent                      |
+
+> **Note:** the list endpoint is not paginated, it returns every script of the team. Only team admins and owners can use the resource, a token without that access is expected to receive HTTP 403. The content of a script is returned only for tokens with the `read:sensitive` or the `root` ability, and `Update` sends only the fields that are filled in, so an emptied field keeps the value the script currently has.
 
 Operation parameters, filters, and available fields vary by endpoint. Refer to the operation descriptions in the n8n editor and the [Coolify API documentation](https://coolify.io/docs/api/overview) for endpoint-specific requirements.
 
