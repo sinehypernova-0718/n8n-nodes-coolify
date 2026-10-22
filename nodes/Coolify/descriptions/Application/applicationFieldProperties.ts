@@ -55,6 +55,14 @@ export function fieldProperty(spec: ApplicationFieldSpec): INodeProperties {
 		typeOptions.multipleValues = true;
 		typeOptions.multipleValueButtonText = 'Add Value';
 	}
+	if (spec.type === 'number') {
+		if (spec.minValue !== undefined) {
+			typeOptions.minValue = spec.minValue;
+		}
+		if (spec.maxValue !== undefined) {
+			typeOptions.maxValue = spec.maxValue;
+		}
+	}
 
 	return {
 		displayName: spec.displayName,

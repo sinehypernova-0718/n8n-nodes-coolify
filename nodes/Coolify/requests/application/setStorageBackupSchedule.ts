@@ -1,12 +1,13 @@
 import { type IDataObject, type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
-import { requireApplicationUuid } from './parameters';
+import { encodePathSegment, requireApplicationUuid } from './parameters';
 import {
 	STORAGE_BACKUP_SCHEDULE_COLLECTIONS,
 	STORAGE_BACKUP_SCHEDULE_ENABLED,
 	storageBackupScheduleBoolean,
 	storageBackupScheduleField,
+	storageBackupScheduleList,
 	storageBackupScheduleNumber,
 	storageBackupScheduleText,
 } from './storageBackupScheduleFields';
@@ -17,6 +18,11 @@ import {
  * The Coolify API replaces the whole schedule, so every value is sent. The
  * flags that default to `false` are only sent when they are switched on, the
  * flag that defaults to `true` is always sent so that it can be switched off.
+ *
+ * The S3 destinations are a single primary UUID and the list of every
+ * destination. The API accepts both, but the primary has to be one of the
+ * entries of the list, so a pair that names two different destinations is
+ * rejected here.
  *
  * The frequency is a cron or a human expression. Only its length is checked
  * here, Coolify validates the expression itself.
@@ -99,6 +105,12 @@ export async function setStorageBackupScheduleRequest(
 	const s3StorageUuid = storageBackupScheduleText
 		.call(this, itemIndex, options, storageBackupScheduleField('s3StorageUuid'))
 		.trim();
+	const s3StorageUuids = storageBackupScheduleList.call(
+		this,
+		itemIndex,
+		options,
+		storageBackupScheduleField('s3StorageUuids'),
+	);
 
 	if (disableLocalBackup && !saveS3) {
 		throw new NodeOperationError(
@@ -108,10 +120,25 @@ export async function setStorageBackupScheduleRequest(
 		);
 	}
 
-	if (saveS3 && !s3StorageUuid) {
+	if (saveS3 && !s3StorageUuid && s3StorageUuids.length === 0) {
 		throw new NodeOperationError(
 			this.getNode(),
 			'The UUID of the S3 storage is required when S3 backups are enabled',
+			{ itemIndex },
+		);
+	}
+
+	// The API makes the single UUID the primary destination and requires it to
+	// be one of the destinations of the list, so a pair that points at two
+	// different destinations is rejected before it is sent.
+	if (
+		s3StorageUuid !== '' &&
+		s3StorageUuids.length > 0 &&
+		!s3StorageUuids.includes(s3StorageUuid)
+	) {
+		throw new NodeOperationError(
+			this.getNode(),
+			'The primary S3 storage UUID has to be one of the S3 storage UUIDs of the list',
 			{ itemIndex },
 		);
 	}
@@ -186,10 +213,13 @@ export async function setStorageBackupScheduleRequest(
 	if (s3StorageUuid !== '') {
 		body.s3_storage_uuid = s3StorageUuid;
 	}
+	if (s3StorageUuids.length > 0) {
+		body.s3_storage_uuids = s3StorageUuids;
+	}
 
 	return {
 		method: 'PUT',
-		path: `applications/${applicationUuid}/storages/${storageUuid}/backups`,
+		path: `applications/${applicationUuid}/storages/${encodePathSegment(storageUuid)}/backups`,
 		body,
 	};
 }

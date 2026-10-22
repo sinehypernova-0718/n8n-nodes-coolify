@@ -35,7 +35,7 @@ export type StorageBackupScheduleCollection =
 /**
  * The kind of the editor control of a field.
  */
-export type StorageBackupScheduleFieldType = 'boolean' | 'number' | 'string';
+export type StorageBackupScheduleFieldType = 'boolean' | 'number' | 'string' | 'stringList';
 
 /**
  * The contract of a single field of the schedule.
@@ -59,7 +59,7 @@ export interface StorageBackupScheduleFieldSpec {
 	/** The description of the field. */
 	description: string;
 	/** The default of the field, the default the API applies. */
-	default: string | number | boolean;
+	default: string | number | boolean | string[];
 	/** The smallest value the API accepts. */
 	minValue?: number;
 	/** The largest value the API accepts. */
@@ -111,6 +111,17 @@ export const STORAGE_BACKUP_SCHEDULE_FIELDS: StorageBackupScheduleFieldSpec[] = 
 		type: 'string',
 		description: 'UUID of the S3 storage the backups are written to',
 		default: '',
+		showWhen: { field: 'saveS3', value: true },
+	},
+	{
+		uiName: 's3StorageUuids',
+		collection: 'backupOptions',
+		apiName: 's3_storage_uuids',
+		displayName: 'S3 Storage UUIDs',
+		type: 'stringList',
+		description:
+			'UUIDs of every S3 storage the backups are written to. The S3 Storage UUID is the primary destination and has to be part of this list, otherwise the first entry is the primary destination',
+		default: [],
 		showWhen: { field: 'saveS3', value: true },
 	},
 	{
@@ -286,14 +297,18 @@ export function storageBackupScheduleFieldValue(
 	itemIndex: number,
 	collection: IDataObject,
 	spec: StorageBackupScheduleFieldSpec,
-): string | number | boolean {
+): string | number | boolean | string[] {
 	const value = collection[spec.uiName];
 
 	if (value !== undefined && value !== null) {
-		return value as string | number | boolean;
+		return value as string | number | boolean | string[];
 	}
 
-	return this.getNodeParameter(spec.uiName, itemIndex, spec.default) as string | number | boolean;
+	return this.getNodeParameter(spec.uiName, itemIndex, spec.default) as
+		| string
+		| number
+		| boolean
+		| string[];
 }
 
 /**
@@ -349,4 +364,33 @@ export function storageBackupScheduleText(
 	const value = storageBackupScheduleFieldValue.call(this, itemIndex, collection, spec);
 
 	return typeof value === 'string' ? value : (spec.default as string);
+}
+
+/**
+ * The value of a list field of the schedule.
+ *
+ * The entries the user left empty are dropped, so an entry that carries only
+ * whitespace never reaches the API as a destination of its own.
+ *
+ * @param itemIndex Index of the input item the request belongs to.
+ * @param collection The values of the collection the field belongs to.
+ * @param spec The contract of the field.
+ * @returns The entries of the list.
+ */
+export function storageBackupScheduleList(
+	this: IExecuteFunctions,
+	itemIndex: number,
+	collection: IDataObject,
+	spec: StorageBackupScheduleFieldSpec,
+): string[] {
+	const value = storageBackupScheduleFieldValue.call(this, itemIndex, collection, spec);
+
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	return value
+		.filter((entry): entry is string => typeof entry === 'string')
+		.map((entry) => entry.trim())
+		.filter((entry) => entry !== '');
 }

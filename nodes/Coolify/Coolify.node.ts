@@ -81,7 +81,7 @@ export class Coolify implements INodeType {
 		version: 1,
 		subtitle: '={{$parameter["operation"]}}',
 		description:
-			'Manage Coolify applications, services, databases, servers, deployments, audit events and cloud init scripts from your n8n workflows.',
+			'Manage Coolify applications, audit events and cloud init scripts from your n8n workflows.',
 		defaults: {
 			name: 'Coolify',
 		},

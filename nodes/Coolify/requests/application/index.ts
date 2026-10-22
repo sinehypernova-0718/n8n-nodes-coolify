@@ -123,7 +123,11 @@ export { listStoragesRequest } from './listStorages';
 export { listTagsRequest } from './listTags';
 export { migrateApplicationRequest } from './migrate';
 export { moveApplicationRequest } from './move';
-export { requireApplicationUuid, requireEnvironmentVariableKey } from './parameters';
+export {
+	encodePathSegment,
+	requireApplicationUuid,
+	requireEnvironmentVariableKey,
+} from './parameters';
 export { removeDestinationRequest } from './removeDestination';
 export { restartApplicationRequest } from './restart';
 export { rollbackApplicationRequest } from './rollback';

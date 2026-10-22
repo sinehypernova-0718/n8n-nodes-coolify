@@ -327,7 +327,7 @@ export const applicationFields: INodeProperties[] = [
 	//       application:delete
 	// ----------------------------------
 	{
-		displayName: 'Warning',
+		displayName: 'Deleting an application removes it, and optionally its configuration and volumes',
 		name: 'deleteWarning',
 		type: 'notice',
 		typeOptions: {
@@ -340,7 +340,6 @@ export const applicationFields: INodeProperties[] = [
 				operation: ['delete'],
 			},
 		},
-		description: 'Deleting an application removes it, and optionally its configuration and volumes',
 	},
 	{
 		displayName: 'Application UUID',
@@ -741,7 +740,8 @@ export const applicationFields: INodeProperties[] = [
 	//      application:updateEnv
 	// ----------------------------------
 	{
-		displayName: 'Warning',
+		displayName:
+			'The Coolify API resets the preview, literal, multiline and shown once flags of the variable when they are not part of the request. This is a known limitation of the endpoint, it does not support a partial update that preserves the flags',
 		name: 'updateEnvWarning',
 		type: 'notice',
 		typeOptions: {
@@ -754,8 +754,6 @@ export const applicationFields: INodeProperties[] = [
 				operation: ['updateEnv'],
 			},
 		},
-		description:
-			'The Coolify API resets the preview, literal, multiline and shown once flags of the variable when they are not part of the request. This is a known limitation of the endpoint, it does not support a partial update that preserves the flags.',
 	},
 	{
 		displayName: 'Application UUID',
@@ -968,7 +966,8 @@ export const applicationFields: INodeProperties[] = [
 	//    application:updateEnvsBulk
 	// ----------------------------------
 	{
-		displayName: 'Warning',
+		displayName:
+			'The Coolify API resets the preview, literal, multiline and shown once flags of every updated variable when they are not part of the request. This is a known limitation of the endpoint, it does not support a partial update that preserves the flags',
 		name: 'updateEnvsBulkWarning',
 		type: 'notice',
 		typeOptions: {
@@ -981,8 +980,6 @@ export const applicationFields: INodeProperties[] = [
 				operation: ['updateEnvsBulk'],
 			},
 		},
-		description:
-			'The Coolify API resets the preview, literal, multiline and shown once flags of every updated variable when they are not part of the request. This is a known limitation of the endpoint, it does not support a partial update that preserves the flags.',
 	},
 	{
 		displayName: 'Application UUID',
@@ -1413,7 +1410,8 @@ export const applicationFields: INodeProperties[] = [
 	//      application:runStorageBackup
 	// ----------------------------------
 	{
-		displayName: 'Warning',
+		displayName:
+			'The storage needs a backup schedule, the Coolify API rejects the request otherwise',
 		name: 'runStorageBackupWarning',
 		type: 'notice',
 		typeOptions: {
@@ -1426,8 +1424,6 @@ export const applicationFields: INodeProperties[] = [
 				operation: ['runStorageBackup'],
 			},
 		},
-		description:
-			'The storage needs a backup schedule, the Coolify API rejects the request otherwise',
 	},
 	{
 		displayName: 'Application UUID',
@@ -1462,7 +1458,8 @@ export const applicationFields: INodeProperties[] = [
 	// application:setStorageBackupSchedule
 	// ----------------------------------
 	{
-		displayName: 'Warning',
+		displayName:
+			'The Coolify API replaces the whole schedule with the values of this form, so every value is sent. Editing an existing schedule resets the timeout and the missing backup notification days to the values shown here',
 		name: 'setStorageBackupScheduleWarning',
 		type: 'notice',
 		typeOptions: {
@@ -1475,8 +1472,6 @@ export const applicationFields: INodeProperties[] = [
 				operation: ['setStorageBackupSchedule'],
 			},
 		},
-		description:
-			'The Coolify API replaces the whole schedule with the values of this form, so every value is sent. Editing an existing schedule resets the timeout and the missing backup notification days to the values shown here.',
 	},
 	{
 		displayName: 'Application UUID',
@@ -1528,7 +1523,8 @@ export const applicationFields: INodeProperties[] = [
 	// application:deleteStorageBackupSchedule
 	// ----------------------------------
 	{
-		displayName: 'Warning',
+		displayName:
+			'Deleting the backup schedule also deletes the existing local and S3 backup archives of the storage, and the request is rejected while a backup or a recovery is running',
 		name: 'deleteStorageBackupScheduleWarning',
 		type: 'notice',
 		typeOptions: {
@@ -1541,8 +1537,6 @@ export const applicationFields: INodeProperties[] = [
 				operation: ['deleteStorageBackupSchedule'],
 			},
 		},
-		description:
-			'Deleting the backup schedule also deletes the existing local and S3 backup archives of the storage, and the request is rejected while a backup or a recovery is running',
 	},
 	{
 		displayName: 'Application UUID',
@@ -1716,7 +1710,8 @@ export const applicationFields: INodeProperties[] = [
 	// application:deletePreviewDeployment
 	// ----------------------------------
 	{
-		displayName: 'Warning',
+		displayName:
+			'Deleting a preview deployment cancels its running deployments, stops its containers and removes its volumes and networks',
 		name: 'deletePreviewDeploymentWarning',
 		type: 'notice',
 		typeOptions: {
@@ -1729,8 +1724,6 @@ export const applicationFields: INodeProperties[] = [
 				operation: ['deletePreviewDeployment'],
 			},
 		},
-		description:
-			'Deleting a preview deployment cancels its running deployments, stops its containers and removes its volumes and networks',
 	},
 	{
 		displayName: 'Application UUID',
@@ -1769,7 +1762,8 @@ export const applicationFields: INodeProperties[] = [
 	//  application:updatePreviewDomains
 	// ----------------------------------
 	{
-		displayName: 'Warning',
+		displayName:
+			'The Coolify API replaces the domains of the preview deployment, the current domains are not read and kept. The mode decides which kind of application the request is for, and the API rejects a request of the other kind',
 		name: 'updatePreviewDomainsWarning',
 		type: 'notice',
 		typeOptions: {
@@ -1782,8 +1776,6 @@ export const applicationFields: INodeProperties[] = [
 				operation: ['updatePreviewDomains'],
 			},
 		},
-		description:
-			'The Coolify API replaces the domains of the preview deployment, the current domains are not read and kept. The mode decides which kind of application the request is for, and the API rejects a request of the other kind.',
 	},
 	{
 		displayName: 'Application UUID',
@@ -2148,7 +2140,8 @@ export const applicationFields: INodeProperties[] = [
 	//       application:migrate
 	// ----------------------------------
 	{
-		displayName: 'Notice',
+		displayName:
+			'Migrating stops the application, transfers the volume data only when both servers are managed by Coolify, and needs a deployment of the application after it completes',
 		name: 'migrateNotice',
 		type: 'notice',
 		typeOptions: {
@@ -2161,8 +2154,6 @@ export const applicationFields: INodeProperties[] = [
 				operation: ['migrate'],
 			},
 		},
-		description:
-			'The migration stops the application and only transfers the volumes when both servers are managed by Coolify. The API only offers the endpoint on a development instance of Coolify.',
 	},
 	{
 		displayName: 'Application UUID',
@@ -2275,7 +2266,8 @@ export const applicationFields: INodeProperties[] = [
 	//        application:update
 	// ----------------------------------
 	{
-		displayName: 'Notice',
+		displayName:
+			'The update only changes the settings that are filled in. The domains are replaced by the given list, and a Docker Compose application needs its domains per service instead',
 		name: 'updateNotice',
 		type: 'notice',
 		typeOptions: {
@@ -2288,8 +2280,6 @@ export const applicationFields: INodeProperties[] = [
 				operation: ['update'],
 			},
 		},
-		description:
-			'The update only changes the settings that are filled in. The domains are replaced by the given list, and a Docker Compose application needs its domains per service instead.',
 	},
 	{
 		displayName: 'Application UUID',

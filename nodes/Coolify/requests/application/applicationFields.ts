@@ -135,6 +135,10 @@ export interface ApplicationFieldSpec {
 	secret?: boolean;
 	/** The number of rows of a text control. */
 	rows?: number;
+	/** The smallest value the API accepts for the field. */
+	minValue?: number;
+	/** The largest value the API accepts for the field. */
+	maxValue?: number;
 	/**
 	 * The encoding the Coolify API expects for the value of the field.
 	 *
@@ -288,6 +292,18 @@ const COMMON_FIELDS: ApplicationFieldSpec[] = [
 			],
 		},
 	),
+	field(
+		'is_permanent_redirect_enabled',
+		'Is Permanent Redirect Enabled',
+		'boolean',
+		'Whether permanent redirects are used instead of temporary ones for the HTTP to HTTPS and www redirects',
+	),
+	field(
+		'traefik_certificate_resolver',
+		'Traefik Certificate Resolver',
+		'string',
+		'Traefik certificate resolver of the application. Use none to disable the resolver, or leave it empty to use the setting of the server',
+	),
 ];
 
 /**
@@ -342,6 +358,12 @@ const DEPLOYMENT_FIELDS: ApplicationFieldSpec[] = [
 		'Is Pr Deployments Public Enabled',
 		'boolean',
 		'Whether the pull request deployments are public',
+	),
+	field(
+		'redact_all_env_values_in_logs',
+		'Redact All Env Values In Logs',
+		'boolean',
+		'Whether every environment variable value is redacted from the logs. When it is switched off, only the locked values are redacted',
 	),
 	field(
 		'stop_grace_period',
@@ -673,6 +695,40 @@ const DOCKER_FIELDS: ApplicationFieldSpec[] = [
 		'string',
 		'Password of the HTTP basic authentication',
 		{ secret: true },
+	),
+	field(
+		'http_basic_auth_hash_algorithm',
+		'Http Basic Auth Hash Algorithm',
+		'options',
+		'Hash algorithm of the HTTP basic authentication password. Argon2id needs the Caddy proxy 2.11 or newer',
+		{
+			options: [
+				{ name: 'Bcrypt', value: 'bcrypt' },
+				{ name: 'Argon2id', value: 'argon2id' },
+			],
+			defaultValue: 'bcrypt',
+		},
+	),
+	field(
+		'http_basic_auth_bcrypt_cost',
+		'Http Basic Auth Bcrypt Cost',
+		'number',
+		'Bcrypt cost of the HTTP basic authentication password',
+		{ defaultValue: 10, minValue: 4, maxValue: 14 },
+	),
+	field(
+		'http_basic_auth_argon2id_memory_cost',
+		'Http Basic Auth Argon2id Memory Cost',
+		'number',
+		'Argon2id memory cost in kibibytes of the HTTP basic authentication password',
+		{ defaultValue: 65_536, minValue: 8192, maxValue: 262_144 },
+	),
+	field(
+		'http_basic_auth_argon2id_time_cost',
+		'Http Basic Auth Argon2id Time Cost',
+		'number',
+		'Argon2id time cost in iterations of the HTTP basic authentication password',
+		{ defaultValue: 4, minValue: 1, maxValue: 12 },
 	),
 	field('is_gpu_enabled', 'Is Gpu Enabled', 'boolean', 'Whether the container uses a GPU'),
 	field('gpu_driver', 'Gpu Driver', 'string', 'Name of the GPU driver'),
@@ -1215,6 +1271,78 @@ export const PORTS_MAPPINGS_PATTERN = /^\d+:\d+(,\d+:\d+)*$/;
 export const COMMIT_SHA_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._\-/]*$/;
 
 /**
+ * The fields of the creation contract whose value the API bounds.
+ *
+ * A range belongs to the group of the field, and every group that declares one
+ * is shared by every variant, so the same fields carry a range in each of them.
+ *
+ * @returns The fields of the creation contract that declare a range.
+ */
+export function boundedApplicationFieldSpecs(): ApplicationGroupedFieldSpec[] {
+	const specs = new Map<string, ApplicationGroupedFieldSpec>();
+
+	for (const variant of APPLICATION_CREATE_VARIANTS) {
+		for (const spec of applicationFieldSpecs(variant)) {
+			if (spec.minValue === undefined && spec.maxValue === undefined) {
+				continue;
+			}
+
+			if (!specs.has(spec.apiName)) {
+				specs.set(spec.apiName, spec);
+			}
+		}
+	}
+
+	return [...specs.values()];
+}
+
+/**
+ * Validate the fields whose contract declares the range the API accepts.
+ *
+ * The range is read from the contract and never repeated, so the values the
+ * number control of the editor offers and the values a request is rejected for
+ * are the same ones. The API declares the range as an integer range, so a
+ * value that is not a whole number is rejected as well.
+ *
+ * @param specs The contract of the fields of the request.
+ * @param body The request body that is built from the editor values.
+ * @param fail Reports a value the API rejects.
+ */
+export function validateBoundedApplicationFields(
+	specs: ApplicationFieldSpec[],
+	body: IDataObject,
+	fail: (message: string) => never,
+): void {
+	for (const spec of specs) {
+		const value = body[spec.apiName];
+
+		if (typeof value !== 'number') {
+			continue;
+		}
+
+		if (!Number.isInteger(value)) {
+			fail(`${spec.displayName} must be a whole number`);
+		}
+
+		const { minValue, maxValue } = spec;
+		const outsideRange =
+			(minValue !== undefined && value < minValue) || (maxValue !== undefined && value > maxValue);
+
+		if (!outsideRange) {
+			continue;
+		}
+
+		if (minValue !== undefined && maxValue !== undefined) {
+			fail(`${spec.displayName} must be a whole number between ${minValue} and ${maxValue}`);
+		} else if (minValue !== undefined) {
+			fail(`${spec.displayName} must be a whole number of at least ${minValue}`);
+		} else {
+			fail(`${spec.displayName} must be a whole number of at most ${maxValue}`);
+		}
+	}
+}
+
+/**
  * Validate the fields that every creation variant needs.
  *
  * The rules are the ones the Coolify API applies, so a request that leaves
@@ -1262,4 +1390,6 @@ export function validateCreateApplicationFields(
 			fail('Every tag needs at least two characters');
 		}
 	}
+
+	validateBoundedApplicationFields(boundedApplicationFieldSpecs(), body, fail);
 }

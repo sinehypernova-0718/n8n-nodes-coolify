@@ -14,6 +14,7 @@ import {
 	storageBackupScheduleCollectionFields,
 	type StorageBackupScheduleCollection,
 	type StorageBackupScheduleFieldSpec,
+	type StorageBackupScheduleFieldType,
 } from '../../requests/application/storageBackupScheduleFields';
 import { showFor } from './applicationFieldProperties';
 
@@ -49,8 +50,20 @@ const COLLECTION_DESCRIPTIONS: Record<StorageBackupScheduleCollection, string> =
  * @param spec The contract of the field.
  * @returns The default of the field.
  */
-function defaultValue(spec: StorageBackupScheduleFieldSpec): string | number | boolean {
+function defaultValue(spec: StorageBackupScheduleFieldSpec): string | number | boolean | string[] {
 	return spec.default;
+}
+
+/**
+ * The editor control of a kind of field.
+ *
+ * A list of strings is a text control that repeats its value.
+ *
+ * @param type The kind of the field.
+ * @returns The type of the editor control.
+ */
+function controlType(type: StorageBackupScheduleFieldType): INodeProperties['type'] {
+	return type === 'stringList' ? 'string' : type;
 }
 
 /**
@@ -66,20 +79,26 @@ function defaultValue(spec: StorageBackupScheduleFieldSpec): string | number | b
 function fieldProperty(spec: StorageBackupScheduleFieldSpec): INodeProperties {
 	const typeOptions: INodeProperties['typeOptions'] = {};
 
-	if (spec.minValue !== undefined) {
-		typeOptions.minValue = spec.minValue;
+	if (spec.type === 'number') {
+		if (spec.minValue !== undefined) {
+			typeOptions.minValue = spec.minValue;
+		}
+		if (spec.maxValue !== undefined) {
+			typeOptions.maxValue = spec.maxValue;
+		}
+		if (spec.numberPrecision !== undefined) {
+			typeOptions.numberPrecision = spec.numberPrecision;
+		}
 	}
-	if (spec.maxValue !== undefined) {
-		typeOptions.maxValue = spec.maxValue;
-	}
-	if (spec.numberPrecision !== undefined) {
-		typeOptions.numberPrecision = spec.numberPrecision;
+	if (spec.type === 'stringList') {
+		typeOptions.multipleValues = true;
+		typeOptions.multipleValueButtonText = 'Add Value';
 	}
 
 	return {
 		displayName: spec.displayName,
 		name: spec.uiName,
-		type: spec.type,
+		type: controlType(spec.type),
 		default: defaultValue(spec),
 		description: spec.description,
 		typeOptions: Object.keys(typeOptions).length > 0 ? typeOptions : undefined,
@@ -103,7 +122,7 @@ export function storageBackupScheduleDescription(): INodeProperties[] {
 		{
 			displayName: STORAGE_BACKUP_SCHEDULE_ENABLED.displayName,
 			name: STORAGE_BACKUP_SCHEDULE_ENABLED.uiName,
-			type: STORAGE_BACKUP_SCHEDULE_ENABLED.type,
+			type: controlType(STORAGE_BACKUP_SCHEDULE_ENABLED.type),
 			default: defaultValue(STORAGE_BACKUP_SCHEDULE_ENABLED),
 			displayOptions: showFor([OPERATION]),
 			description: STORAGE_BACKUP_SCHEDULE_ENABLED.description,

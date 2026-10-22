@@ -1,7 +1,7 @@
 import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
-import { requireApplicationUuid } from './parameters';
+import { encodePathSegment, requireApplicationUuid } from './parameters';
 
 /**
  * Build the request that deletes the backup schedule of a storage.
@@ -35,6 +35,6 @@ export async function deleteStorageBackupScheduleRequest(
 
 	return {
 		method: 'DELETE',
-		path: `applications/${applicationUuid}/storages/${storageUuid}/backups`,
+		path: `applications/${applicationUuid}/storages/${encodePathSegment(storageUuid)}/backups`,
 	};
 }

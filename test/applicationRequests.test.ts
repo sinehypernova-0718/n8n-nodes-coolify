@@ -6,6 +6,7 @@ import {
 	APPLICATION_FIELD_COLLECTIONS,
 	applicationFieldSpecs,
 	applicationFieldUiName,
+	boundedApplicationFieldSpecs,
 } from '../nodes/Coolify/requests/application/applicationFields';
 import {
 	addDestinationRequest,
@@ -78,6 +79,67 @@ function createContext(parameters: Record<string, unknown> = {}) {
 	};
 
 	return ctx as unknown as IExecuteFunctions;
+}
+
+/**
+ * The request builders of the creation variants.
+ */
+const CREATE_VARIANT_BUILDERS: Record<
+	string,
+	(this: IExecuteFunctions, itemIndex: number) => Promise<CoolifyRequest>
+> = {
+	public: createPublicApplicationRequest,
+	githubApp: createPrivateGithubAppApplicationRequest,
+	privateRepository: createPrivateDeployKeyApplicationRequest,
+	dockerfile: createDockerfileApplicationRequest,
+	dockerImage: createDockerImageApplicationRequest,
+};
+
+/**
+ * The source values of the creation variants.
+ *
+ * The source fields differ per variant, so the builder of a variant needs the
+ * values of the source fields it accepts.
+ */
+const CREATE_SOURCE_VALUES: Record<string, unknown> = {
+	gitRepository: 'https://github.com/acme/app',
+	gitBranch: 'main',
+	buildPack: 'nixpacks',
+	dockerfile: 'FROM alpine',
+	dockerRegistryImageName: 'nginx',
+	dockerRegistryImageTag: 'latest',
+	githubAppUuid: 'app-1',
+	privateKeyUuid: 'key-1',
+};
+
+/**
+ * The identity values every creation variant needs.
+ */
+const CREATE_BASE_PARAMETERS: Record<string, unknown> = {
+	projectUuid: 'project-1',
+	serverUuid: 'server-1',
+	environmentName: 'production',
+};
+
+/**
+ * The parameters of a creation request of a variant.
+ *
+ * @param variant The creation variant.
+ * @returns The parameters the builder of the variant needs.
+ */
+function createVariantParameters(variant: string): Record<string, unknown> {
+	const parameters: Record<string, unknown> = { ...CREATE_BASE_PARAMETERS };
+
+	for (const spec of applicationFieldSpecs(variant as never)) {
+		if (spec.group !== 'source') {
+			continue;
+		}
+
+		const name = applicationFieldUiName(spec.apiName);
+		parameters[name] = spec.defaultValue ?? CREATE_SOURCE_VALUES[name];
+	}
+
+	return parameters;
 }
 
 describe('application request builders', () => {
@@ -2649,55 +2711,6 @@ describe('application request builders', () => {
 	});
 
 	describe('the booleans whose API default is true', () => {
-		const sourceValues: Record<string, unknown> = {
-			gitRepository: 'https://github.com/acme/app',
-			gitBranch: 'main',
-			buildPack: 'nixpacks',
-			dockerfile: 'FROM alpine',
-			dockerRegistryImageName: 'nginx',
-			dockerRegistryImageTag: 'latest',
-			githubAppUuid: 'app-1',
-			privateKeyUuid: 'key-1',
-		};
-
-		const builders: Record<
-			string,
-			(this: IExecuteFunctions, itemIndex: number) => Promise<CoolifyRequest>
-		> = {
-			public: createPublicApplicationRequest,
-			githubApp: createPrivateGithubAppApplicationRequest,
-			privateRepository: createPrivateDeployKeyApplicationRequest,
-			dockerfile: createDockerfileApplicationRequest,
-			dockerImage: createDockerImageApplicationRequest,
-		};
-
-		const base = {
-			projectUuid: 'project-1',
-			serverUuid: 'server-1',
-			environmentName: 'production',
-		};
-
-		/**
-		 * The parameters of a creation request of a variant.
-		 *
-		 * @param variant The creation variant.
-		 * @returns The parameters the builder of the variant needs.
-		 */
-		function parametersOf(variant: string): Record<string, unknown> {
-			const parameters: Record<string, unknown> = { ...base };
-
-			for (const spec of applicationFieldSpecs(variant as never)) {
-				if (spec.group !== 'source') {
-					continue;
-				}
-
-				const name = applicationFieldUiName(spec.apiName);
-				parameters[name] = spec.defaultValue ?? sourceValues[name];
-			}
-
-			return parameters;
-		}
-
 		it('sends the field as false when the user switched it off', async () => {
 			for (const variant of APPLICATION_CREATE_VARIANTS) {
 				for (const spec of applicationFieldSpecs(variant)) {
@@ -2707,10 +2720,10 @@ describe('application request builders', () => {
 
 					const collection =
 						APPLICATION_FIELD_COLLECTIONS[spec.group as keyof typeof APPLICATION_FIELD_COLLECTIONS];
-					const parameters = parametersOf(variant);
+					const parameters = createVariantParameters(variant);
 					parameters[collection] = { [applicationFieldUiName(spec.apiName)]: false };
 
-					const request = await builders[variant].call(createContext(parameters), 0);
+					const request = await CREATE_VARIANT_BUILDERS[variant].call(createContext(parameters), 0);
 
 					expect(request.body, `the field ${spec.apiName} was not sent to the API`).toHaveProperty(
 						spec.apiName,
@@ -2727,7 +2740,10 @@ describe('application request builders', () => {
 						continue;
 					}
 
-					const request = await builders[variant].call(createContext(parametersOf(variant)), 0);
+					const request = await CREATE_VARIANT_BUILDERS[variant].call(
+						createContext(createVariantParameters(variant)),
+						0,
+					);
 
 					expect(
 						request.body,
@@ -2735,6 +2751,427 @@ describe('application request builders', () => {
 					).not.toHaveProperty(spec.apiName);
 				}
 			}
+		});
+	});
+
+	describe('the optional settings a creation and an update publish', () => {
+		const optionalNames = [
+			'is_permanent_redirect_enabled',
+			'traefik_certificate_resolver',
+			'redact_all_env_values_in_logs',
+			'http_basic_auth_hash_algorithm',
+			'http_basic_auth_bcrypt_cost',
+			'http_basic_auth_argon2id_memory_cost',
+			'http_basic_auth_argon2id_time_cost',
+		];
+
+		/**
+		 * The optional settings of a creation, as the editor collects them.
+		 */
+		const optionalSettings = {
+			applicationSettings: {
+				isPermanentRedirectEnabled: true,
+				traefikCertificateResolver: 'letsencrypt',
+			},
+			deploymentSettings: { redactAllEnvValuesInLogs: true },
+			dockerSettings: {
+				httpBasicAuthHashAlgorithm: 'argon2id',
+				httpBasicAuthBcryptCost: 12,
+				httpBasicAuthArgon2idMemoryCost: 131_072,
+				httpBasicAuthArgon2idTimeCost: 6,
+			},
+		};
+
+		/**
+		 * The body the optional settings turn into.
+		 */
+		const optionalSettingsBody = {
+			is_permanent_redirect_enabled: true,
+			traefik_certificate_resolver: 'letsencrypt',
+			redact_all_env_values_in_logs: true,
+			http_basic_auth_hash_algorithm: 'argon2id',
+			http_basic_auth_bcrypt_cost: 12,
+			http_basic_auth_argon2id_memory_cost: 131_072,
+			http_basic_auth_argon2id_time_cost: 6,
+		};
+
+		/**
+		 * The collection that holds the field of a bounded setting.
+		 *
+		 * @param spec The contract of the field.
+		 * @returns The name of the collection that holds the field.
+		 */
+		function collectionOf(spec: { group: string }): string {
+			return APPLICATION_FIELD_COLLECTIONS[
+				spec.group as keyof typeof APPLICATION_FIELD_COLLECTIONS
+			];
+		}
+
+		it('sends the optional settings of every creation variant', async () => {
+			for (const variant of APPLICATION_CREATE_VARIANTS) {
+				const request = await CREATE_VARIANT_BUILDERS[variant].call(
+					createContext({ ...createVariantParameters(variant), ...optionalSettings }),
+					0,
+				);
+
+				expect(
+					request.body,
+					`the creation variant ${variant} did not send the optional settings`,
+				).toMatchObject(optionalSettingsBody);
+			}
+		});
+
+		it('leaves the optional settings of every creation variant out when they are not added', async () => {
+			for (const variant of APPLICATION_CREATE_VARIANTS) {
+				const request = await CREATE_VARIANT_BUILDERS[variant].call(
+					createContext(createVariantParameters(variant)),
+					0,
+				);
+
+				for (const name of optionalNames) {
+					expect(request.body, `the creation variant ${variant} sent ${name}`).not.toHaveProperty(
+						name,
+					);
+				}
+			}
+		});
+
+		it('accepts the bounds of a bounded setting on a creation', async () => {
+			for (const spec of boundedApplicationFieldSpecs()) {
+				for (const value of [spec.minValue, spec.maxValue]) {
+					const request = await createPublicApplicationRequest.call(
+						createContext({
+							...createVariantParameters('public'),
+							[collectionOf(spec)]: { [applicationFieldUiName(spec.apiName)]: value },
+						}),
+						0,
+					);
+
+					expect(request.body, `the creation rejected ${spec.apiName} ${value}`).toHaveProperty(
+						spec.apiName,
+						value,
+					);
+				}
+			}
+		});
+
+		it('rejects a value outside the bounds of a bounded setting on a creation', async () => {
+			for (const spec of boundedApplicationFieldSpecs()) {
+				const outside = [(spec.minValue as number) - 1, (spec.maxValue as number) + 1, 0.5];
+
+				for (const value of outside) {
+					await expect(
+						createPublicApplicationRequest.call(
+							createContext({
+								...createVariantParameters('public'),
+								[collectionOf(spec)]: { [applicationFieldUiName(spec.apiName)]: value },
+							}),
+							0,
+						),
+						`the creation accepted ${spec.apiName} ${value}`,
+					).rejects.toThrowError(NodeOperationError);
+				}
+			}
+		});
+
+		it('sends the optional settings of an update', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					updateApplicationSettings: {
+						isPermanentRedirectEnabled: 'enabled',
+						traefikCertificateResolver: 'letsencrypt',
+					},
+					updateDeploymentSettings: { redactAllEnvValuesInLogs: 'disabled' },
+					updateDockerSettings: {
+						httpBasicAuthHashAlgorithm: 'argon2id',
+						httpBasicAuthBcryptCost: '12',
+					},
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({
+				is_permanent_redirect_enabled: true,
+				traefik_certificate_resolver: 'letsencrypt',
+				redact_all_env_values_in_logs: false,
+				http_basic_auth_hash_algorithm: 'argon2id',
+				http_basic_auth_bcrypt_cost: 12,
+			});
+		});
+
+		it('keeps the optional settings of an update that are unchanged', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					name: 'my-app',
+					updateApplicationSettings: { isPermanentRedirectEnabled: 'unchanged' },
+					updateDeploymentSettings: { redactAllEnvValuesInLogs: 'unchanged' },
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({ name: 'my-app' });
+		});
+
+		it('accepts the bounds of a bounded setting on an update', async () => {
+			for (const spec of boundedApplicationFieldSpecs()) {
+				for (const value of [spec.minValue, spec.maxValue]) {
+					const request = await updateApplicationRequest.call(
+						createContext({
+							applicationUuid: 'abc-123',
+							updateDockerSettings: { [applicationFieldUiName(spec.apiName)]: String(value) },
+						}),
+						0,
+					);
+
+					expect(request.body, `the update rejected ${spec.apiName} ${value}`).toHaveProperty(
+						spec.apiName,
+						value,
+					);
+				}
+			}
+		});
+
+		it('rejects a value outside the bounds of a bounded setting on an update', async () => {
+			for (const spec of boundedApplicationFieldSpecs()) {
+				const outside = [(spec.minValue as number) - 1, (spec.maxValue as number) + 1, 0.5];
+
+				for (const value of outside) {
+					await expect(
+						updateApplicationRequest.call(
+							createContext({
+								applicationUuid: 'abc-123',
+								updateDockerSettings: { [applicationFieldUiName(spec.apiName)]: String(value) },
+							}),
+							0,
+						),
+						`the update accepted ${spec.apiName} ${value}`,
+					).rejects.toThrowError(NodeOperationError);
+				}
+			}
+		});
+	});
+
+	describe('the enumerations of the update', () => {
+		it('drops the option without a value and keeps the other settings', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					name: 'my-app',
+					updateApplicationSettings: { redirect: '' },
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({ name: 'my-app' });
+		});
+
+		it('sends the value when the user picks an option with one', async () => {
+			const request = await updateApplicationRequest.call(
+				createContext({
+					applicationUuid: 'abc-123',
+					updateApplicationSettings: { redirect: 'www' },
+				}),
+				0,
+			);
+
+			expect(request.body).toEqual({ redirect: 'www' });
+		});
+	});
+
+	describe('the S3 destinations of the storage backup schedule', () => {
+		const base = {
+			applicationUuid: 'abc-123',
+			storageUuid: 'storage-789',
+			frequency: '0 2 * * *',
+		};
+
+		it('sends the list of the S3 storages when the user added one', async () => {
+			const request = await setStorageBackupScheduleRequest.call(
+				createContext({
+					...base,
+					backupOptions: { saveS3: true, s3StorageUuids: ['s3-a', 's3-b'] },
+				}),
+				0,
+			);
+
+			expect(request.body).toMatchObject({
+				save_s3: true,
+				s3_storage_uuids: ['s3-a', 's3-b'],
+			});
+			expect(request.body).not.toHaveProperty('s3_storage_uuid');
+		});
+
+		it('sends the primary S3 storage together with the list that holds it', async () => {
+			const request = await setStorageBackupScheduleRequest.call(
+				createContext({
+					...base,
+					backupOptions: {
+						saveS3: true,
+						s3StorageUuid: 's3-b',
+						s3StorageUuids: ['s3-a', 's3-b'],
+					},
+				}),
+				0,
+			);
+
+			expect(request.body).toMatchObject({
+				s3_storage_uuid: 's3-b',
+				s3_storage_uuids: ['s3-a', 's3-b'],
+			});
+		});
+
+		it('drops the empty entries of the list', async () => {
+			const request = await setStorageBackupScheduleRequest.call(
+				createContext({
+					...base,
+					backupOptions: { saveS3: true, s3StorageUuids: [' s3-a ', '', '   '] },
+				}),
+				0,
+			);
+
+			expect(request.body).toMatchObject({ s3_storage_uuids: ['s3-a'] });
+		});
+
+		it('accepts S3 backups that carry only the list of the destinations', async () => {
+			const request = await setStorageBackupScheduleRequest.call(
+				createContext({
+					...base,
+					backupOptions: { saveS3: true, disableLocalBackup: true, s3StorageUuids: ['s3-a'] },
+				}),
+				0,
+			);
+
+			expect(request.body).toMatchObject({ save_s3: true, disable_local_backup: true });
+		});
+
+		it('fails when the primary S3 storage is not one of the destinations', async () => {
+			await expect(
+				setStorageBackupScheduleRequest.call(
+					createContext({
+						...base,
+						backupOptions: {
+							saveS3: true,
+							s3StorageUuid: 's3-c',
+							s3StorageUuids: ['s3-a', 's3-b'],
+						},
+					}),
+					0,
+				),
+			).rejects.toThrowError(NodeOperationError);
+		});
+
+		it('still fails when the S3 backups carry no destination at all', async () => {
+			await expect(
+				setStorageBackupScheduleRequest.call(
+					createContext({ ...base, backupOptions: { saveS3: true } }),
+					0,
+				),
+			).rejects.toThrowError(NodeOperationError);
+		});
+	});
+
+	describe('the encoding of the identifiers of a path', () => {
+		it('encodes a reserved character of the application uuid', async () => {
+			const request = await getApplicationRequest.call(
+				createContext({ applicationUuid: 'app/one' }),
+				0,
+			);
+
+			expect(request.path).toBe('applications/app%2Fone');
+		});
+
+		it('keeps an ordinary identifier exactly as it was', async () => {
+			const request = await getApplicationRequest.call(
+				createContext({ applicationUuid: 'abc-123' }),
+				0,
+			);
+
+			expect(request.path).toBe('applications/abc-123');
+		});
+
+		it('encodes a reserved character of a secondary identifier', async () => {
+			const env = await deleteEnvRequest.call(
+				createContext({ applicationUuid: 'abc-123', envUuid: 'env 1/x' }),
+				0,
+			);
+			const storage = await deleteStorageRequest.call(
+				createContext({ applicationUuid: 'abc-123', storageUuid: 'stor?age' }),
+				0,
+			);
+
+			expect(env.path).toBe('applications/abc-123/envs/env%201%2Fx');
+			expect(storage.path).toBe('applications/abc-123/storages/stor%3Fage');
+		});
+
+		it('does not encode the value of a query parameter', async () => {
+			const request = await listApplicationsRequest.call(createContext({ tag: 'a b/c' }), 0);
+
+			expect(request.path).toBe('applications');
+			expect(request.qs).toEqual({ tag: 'a b/c' });
+		});
+
+		it('encodes a reserved character of every secondary identifier', async () => {
+			const cases = [
+				[deleteTagRequest, { tagUuid: 'tag/one' }, 'applications/abc-123/tags/tag%2Fone'],
+				[
+					deleteStorageBackupScheduleRequest,
+					{ storageUuid: 'stor age' },
+					'applications/abc-123/storages/stor%20age/backups',
+				],
+				[
+					removeDestinationRequest,
+					{ destinationUuid: 'dest#1' },
+					'applications/abc-123/destinations/dest%231',
+				],
+				[
+					runStorageBackupRequest,
+					{ storageUuid: 'stor/age' },
+					'applications/abc-123/storages/stor%2Fage/backups/run',
+				],
+				[
+					setStorageBackupScheduleRequest,
+					{ storageUuid: 'stor/age', frequency: '0 2 * * *' },
+					'applications/abc-123/storages/stor%2Fage/backups',
+				],
+			];
+
+			for (const [builder, parameters, path] of cases) {
+				const request = await builder.call(
+					createContext({ applicationUuid: 'abc-123', ...parameters }),
+					0,
+				);
+
+				expect(request.path).toBe(path);
+			}
+		});
+
+		it('encodes a reserved character exactly once', async () => {
+			const request = await deleteEnvRequest.call(
+				createContext({ applicationUuid: 'a%2Fb', envUuid: 'e%2Ff' }),
+				0,
+			);
+
+			expect(request.path).toBe('applications/a%252Fb/envs/e%252Ff');
+		});
+
+		it('leaves the pull request id unencoded because it is a whole number', async () => {
+			const request = await getPreviewDeploymentRequest.call(
+				createContext({ applicationUuid: 'abc-123', pullRequestId: 42 }),
+				0,
+			);
+
+			expect(request.path).toBe('applications/abc-123/previews/42');
+		});
+
+		it('rejects a pull request id that is not a whole number', async () => {
+			await expect(
+				getPreviewDeploymentRequest.call(
+					createContext({ applicationUuid: 'abc-123', pullRequestId: '4/2' }),
+					0,
+				),
+			).rejects.toThrowError(NodeOperationError);
 		});
 	});
 });

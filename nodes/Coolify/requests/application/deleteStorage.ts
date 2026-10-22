@@ -1,7 +1,7 @@
 import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
-import { requireApplicationUuid } from './parameters';
+import { encodePathSegment, requireApplicationUuid } from './parameters';
 
 /**
  * Build the request that deletes a storage of an application.
@@ -29,6 +29,6 @@ export async function deleteStorageRequest(
 
 	return {
 		method: 'DELETE',
-		path: `applications/${applicationUuid}/storages/${storageUuid}`,
+		path: `applications/${applicationUuid}/storages/${encodePathSegment(storageUuid)}`,
 	};
 }

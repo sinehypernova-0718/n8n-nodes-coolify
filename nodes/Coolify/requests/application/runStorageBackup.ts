@@ -1,7 +1,7 @@
 import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
-import { requireApplicationUuid } from './parameters';
+import { encodePathSegment, requireApplicationUuid } from './parameters';
 
 /**
  * Build the request that queues an immediate backup of a storage.
@@ -28,6 +28,6 @@ export async function runStorageBackupRequest(
 
 	return {
 		method: 'POST',
-		path: `applications/${applicationUuid}/storages/${storageUuid}/backups/run`,
+		path: `applications/${applicationUuid}/storages/${encodePathSegment(storageUuid)}/backups/run`,
 	};
 }

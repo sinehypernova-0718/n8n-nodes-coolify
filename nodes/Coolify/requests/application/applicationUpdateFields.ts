@@ -36,6 +36,7 @@ import {
 	encodeFieldValue,
 	PORTS_EXPOSES_PATTERN,
 	PORTS_MAPPINGS_PATTERN,
+	validateBoundedApplicationFields,
 	type ApplicationFieldGroup,
 	type ApplicationGroupedFieldSpec,
 } from './applicationFields';
@@ -83,6 +84,10 @@ export const APPLICATION_UPDATE_FIELDS = [
 	'health_check_scheme',
 	'health_check_start_period',
 	'health_check_timeout',
+	'http_basic_auth_argon2id_memory_cost',
+	'http_basic_auth_argon2id_time_cost',
+	'http_basic_auth_bcrypt_cost',
+	'http_basic_auth_hash_algorithm',
 	'include_source_commit_in_build',
 	'inject_build_args_to_dockerfile',
 	'install_command',
@@ -98,6 +103,7 @@ export const APPLICATION_UPDATE_FIELDS = [
 	'is_gpu_enabled',
 	'is_gzip_enabled',
 	'is_log_drain_enabled',
+	'is_permanent_redirect_enabled',
 	'is_pr_deployments_public_enabled',
 	'is_preserve_repository_enabled',
 	'is_preview_deployments_enabled',
@@ -127,9 +133,11 @@ export const APPLICATION_UPDATE_FIELDS = [
 	'pre_deployment_command_container',
 	'preview_url_template',
 	'publish_directory',
+	'redact_all_env_values_in_logs',
 	'redirect',
 	'start_command',
 	'stop_grace_period',
+	'traefik_certificate_resolver',
 	'use_build_secrets',
 	'use_build_server',
 	'watch_paths',
@@ -247,13 +255,21 @@ function sortOptions(
 /**
  * Add the value that keeps the current setting to an enumeration.
  *
+ * The update endpoint cannot express "no value": a field it leaves out keeps
+ * the current setting of the application. An option without a value is
+ * therefore meaningless in the update, and it is dropped so the editor never
+ * offers a choice that the request would silently ignore.
+ *
  * @param options The options of the enumeration.
  * @returns The options of the enumeration of the update endpoint.
  */
 function withUnchangedOption(
 	options: { name: string; value: string }[],
 ): { name: string; value: string }[] {
-	return sortOptions([...options, { name: 'Unchanged', value: APPLICATION_UPDATE_UNCHANGED }]);
+	return sortOptions([
+		...options.filter((option) => option.value !== ''),
+		{ name: 'Unchanged', value: APPLICATION_UPDATE_UNCHANGED },
+	]);
 }
 
 /**
@@ -491,6 +507,8 @@ export function validateUpdateApplicationFields(
 	) {
 		fail(`The number of Docker images to keep must be between 0 and ${MAX_DOCKER_IMAGES_TO_KEEP}`);
 	}
+
+	validateBoundedApplicationFields(applicationUpdateFieldSpecs(), body, fail);
 
 	if (Array.isArray(body.docker_compose_domains)) {
 		for (const entry of body.docker_compose_domains as IDataObject[]) {

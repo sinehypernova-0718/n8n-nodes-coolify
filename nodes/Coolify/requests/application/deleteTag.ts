@@ -1,7 +1,7 @@
 import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
-import { requireApplicationUuid } from './parameters';
+import { encodePathSegment, requireApplicationUuid } from './parameters';
 
 /**
  * Build the request that removes a tag from an application.
@@ -29,6 +29,6 @@ export async function deleteTagRequest(
 
 	return {
 		method: 'DELETE',
-		path: `applications/${applicationUuid}/tags/${tagUuid}`,
+		path: `applications/${applicationUuid}/tags/${encodePathSegment(tagUuid)}`,
 	};
 }

@@ -164,7 +164,7 @@ Every operation is sent through the shared transport, so the rate limit and retr
 | `Update Preview Domains`    | Replace the domains of a preview deployment                                                     |
 | `Delete Preview Deployment` | Delete a preview deployment, cancel its running deployments and remove its volumes and networks |
 
-> **Note:** the preview operations need Coolify 4.4.0 or newer. `Update Preview Domains` replaces the domains instead of merging them: a domain that is not part of the request is removed, and a Docker Compose service that is not listed loses its domain. Removing every domain is a separate, explicit switch.
+> **Note:** `Update Preview Domains` replaces the domains instead of merging them: a domain that is not part of the request is removed, and a Docker Compose service that is not listed loses its domain. Removing every domain is a separate, explicit switch.
 
 #### Logs
 
@@ -173,7 +173,7 @@ Every operation is sent through the shared transport, so the rate limit and retr
 | `Get Application Logs`         | Get the container logs of an application       |
 | `Get Preview Application Logs` | Get the container logs of a preview deployment |
 
-> **Note:** both log operations need a token with the `read:sensitive` or the `root` ability, and `Get Preview Application Logs` needs Coolify 4.4.0 or newer.
+> **Note:** both log operations need a token with the `read:sensitive` or the `root` ability.
 
 #### Tags
 
@@ -208,7 +208,7 @@ Every operation is sent through the shared transport, so the rate limit and retr
 | `Rollback` | Queue a rollback deployment of an application to a previous image                                      |
 | `Delete`   | Delete an application by UUID                                                                          |
 
-> **Note:** `Migrate` is only available on a development instance of Coolify, the API answers HTTP 404 on a production instance. `Rollback` needs a token with the `deploy` ability. `Delete` removes the configuration and the volumes of the application as well, the switches of the operation control that.
+> **Note:** `Migrate` stops the application and only transfers the volume data when both servers are managed by Coolify, so the application has to be deployed again after it completes. `Rollback` needs a token with the `deploy` ability. `Delete` removes the configuration and the volumes of the application as well, the switches of the operation control that.
 
 ### Audit Event
 
@@ -288,7 +288,7 @@ This package is designed for n8n's community node ecosystem and uses the n8n nod
 - **Integration type:** n8n community node.
 - **Implementation language:** TypeScript.
 - **API:** Coolify API v1.
-- **Coolify version:** 4.3.0 or newer for the `Application` resource. The credential test uses `GET /team`, the canonical endpoint for "the team bound to the token" in the [Coolify OpenAPI specification](https://github.com/coollabsio/coolify/blob/main/openapi.yaml). Coolify 4.0.x–4.2.x only expose the older `/teams/current` alias of the same endpoint, so the credential test reports HTTP 404 on those instances. The preview deployment operations and `Get Preview Application Logs` need Coolify 4.4.0 or newer.
+- **Coolify version:** Depends on the target Coolify instance's API version. The credential test uses `GET /team`, the canonical endpoint for "the team bound to the token" in the [Coolify OpenAPI specification](https://github.com/coollabsio/coolify/blob/main/openapi.yaml). Whether a given endpoint or field is accepted depends on the version of Coolify you run; consult the Coolify API documentation for your instance and do not assume every field is supported by every stable release.
 - **Authentication:** Coolify API token (Bearer), with the `read` permission.
 - **Package distribution:** npm — end users install the published package with the n8n community nodes interface, and npm remains the registry the package is published to.
 - **Development package manager:** pnpm — the repository is developed, built, and published with pnpm, pinned through the `packageManager` field in `package.json` and `pnpm-lock.yaml`.

@@ -1,7 +1,7 @@
 import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
-import { requireApplicationUuid } from './parameters';
+import { encodePathSegment, requireApplicationUuid } from './parameters';
 
 /**
  * Build the request that deletes an environment variable of an application.
@@ -31,6 +31,6 @@ export async function deleteEnvRequest(
 
 	return {
 		method: 'DELETE',
-		path: `applications/${applicationUuid}/envs/${envUuid}`,
+		path: `applications/${applicationUuid}/envs/${encodePathSegment(envUuid)}`,
 	};
 }

@@ -11,6 +11,21 @@ const ENVIRONMENT_VARIABLE_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_.]*$/;
 const MAX_ENVIRONMENT_VARIABLE_KEY_LENGTH = 255;
 
 /**
+ * Encode a value that becomes one segment of the path of an endpoint.
+ *
+ * Only the segment is encoded, never the separators of the path itself, so the
+ * value the user entered reaches the endpoint as a path segment instead of
+ * changing the shape of the path. The characters of a UUID are not reserved, so
+ * an ordinary identifier is sent exactly as it was before.
+ *
+ * @param value The value of the path segment.
+ * @returns The value in the form the path of the endpoint needs.
+ */
+export function encodePathSegment(value: string): string {
+	return encodeURIComponent(value);
+}
+
+/**
  * Read the UUID of the application an operation works on.
  *
  * Every application endpoint addresses the application through its UUID, so
@@ -19,7 +34,7 @@ const MAX_ENVIRONMENT_VARIABLE_KEY_LENGTH = 255;
  * @param ctx The execution context of the node.
  * @param itemIndex Index of the input item the request belongs to.
  * @param purpose What the operation does, used in the error message.
- * @returns The UUID of the application.
+ * @returns The UUID of the application, encoded for the path of the endpoint.
  */
 export function requireApplicationUuid(
 	ctx: IExecuteFunctions,
@@ -34,7 +49,7 @@ export function requireApplicationUuid(
 		});
 	}
 
-	return applicationUuid;
+	return encodePathSegment(applicationUuid);
 }
 
 /**
