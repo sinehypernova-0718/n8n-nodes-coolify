@@ -107,7 +107,8 @@ the matching memory in the same task. Keep the `mem:`-reference graph intact.
 
 ## 3. MCP orchestration
 
-Ten servers are connected. Each has one job. Calling all of them on every task is a
+Nine servers are connected through Code Mode (the `vercel` server is no longer reachable —
+see _vercel, removed_ below). Each has one job. Calling all of them on every task is a
 failure mode, not diligence.
 
 | Server                          | Use it for                                                                                                                                                                                                            | Do not use it for                                                                                     |
@@ -121,7 +122,24 @@ failure mode, not diligence.
 | **firecrawl** _(authenticated)_ | Structured extraction (`scrape`/`parse`/`map`/`crawl`), site-wide crawling, scheduled monitors, public developer index (`developer_search`), government sources (`gov_search`), paper research                        | Cheap lookups — it is the most context-expensive server here; account usage limits (`credit_usage`)   |
 | **playwright**                  | Real-browser verification: the n8n editor, a Coolify instance, a rendered docs page                                                                                                                                   | Static documentation; this repository's tests are unit tests, not browser tests                       |
 | **context-mode** _(optional)_   | Context reduction: `ctx_execute` / `ctx_execute_file` (aggregate over a file or a command output), `ctx_batch_execute` (many commands, answered inline), `ctx_index` + `ctx_search` (fetched content stays queryable) | Small files, where the overhead exceeds the benefit; see §4 for when it pays                          |
-| **vercel**                      | **Do not invoke for this repository.** It is an npm-published n8n node package: no Vercel project, no `vercel.json`, no Vercel CI. Use it only if the user explicitly changes that policy                             | Everything else in this repo                                                                          |
+
+### Code Mode execution discipline
+
+- Every MCP call runs through `execute`; the native `read` / `grep` / `glob` / `edit` /
+  `write` / `shell` tools stay direct.
+- **`search()` before every unfamiliar call.** The Code Mode catalog is partial and each
+  server's tool list changes between sessions (the `vercel` namespace emptied outright;
+  GitHub's inventory swapped a tool mid-session). Call only tool paths that `search()`
+  returned in this session, and treat a mismatch between a documented tool name and the
+  catalog as a fact to report, not a heuristic to code against.
+- Batch independent calls in **one** `execute` block; sequential round trips for
+  independent results are the same failure mode as calling every server "to be thorough".
+- Shape results before returning them: map, filter or count the payload in code and
+  `return` only the fields you need — never echo a raw discovery payload into context.
+
+**`vercel` — removed.** The namespace no longer exposes tools. Vercel-targeted work in
+this repository was already out of scope; now it is out of reach. Report the gap instead
+of improvising a substitute.
 
 **Authentication is not authorisation.** `github` and `firecrawl` are authenticated, so
 read and research tools work. Before any mutating call (comment, issue, PR, release,
@@ -156,21 +174,35 @@ type, field or line number, and never treat an "approximate" hit as evidence.
 
 ### Task routing
 
-| Task                                                 | Primary                                                                                            | Secondary                                    | Skip                                       |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------ |
-| Local code change                                    | `serena` (navigate) + native edit/shell                                                            | `git` (diff, status)                         | github, exa, firecrawl, playwright, vercel |
-| File or content search in the working tree           | `fff` (`grep`, `find_files`, `multi_grep`)                                                         | native `grep` / `glob` for exact patterns    | serena, context7, exa                      |
-| Understanding an unfamiliar module                   | `serena` (`get_symbols_overview` → `find_symbol`)                                                  | native `read` for prose/config               | all web servers                            |
-| Documentation research (library API)                 | `context7`                                                                                         | `exa.web_fetch_exa` for the official page    | firecrawl crawling/monitoring              |
-| Upstream, issue or PR investigation                  | `github`                                                                                           | `firecrawl.developer_search` for public code | `git` (local only)                         |
-| Website or UI verification                           | `playwright`                                                                                       | `firecrawl.scrape` for static text           | context-mode                               |
-| Git operations (local)                               | `git`                                                                                              | native shell `git` for porcelain output      | github write tools                         |
-| Large payload, or repeated queries over fetched docs | `context-mode` (`ctx_execute_file`, `ctx_index` + `ctx_search`)                                    | —                                            | reading whole files into context           |
-| Deployment / runtime errors                          | `vercel` only for Vercel-hosted targets, and never for this repo without an explicit policy change | —                                            | everything else here                       |
-| Project knowledge and memories                       | `serena` memories (when present)                                                                   | this file                                    | —                                          |
+| Task                                                 | Primary                                                                                       | Secondary                                    | Skip                                       |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------ |
+| Local code change                                    | `serena` (navigate) + native edit/shell                                                       | `git` (diff, status)                         | github, exa, firecrawl, playwright, vercel |
+| File or content search in the working tree           | `fff` (`grep`, `find_files`, `multi_grep`)                                                    | native `grep` / `glob` for exact patterns    | serena, context7, exa                      |
+| Understanding an unfamiliar module                   | `serena` (`get_symbols_overview` → `find_symbol`)                                             | native `read` for prose/config               | all web servers                            |
+| Documentation research (library API)                 | `context7`                                                                                    | `exa.web_fetch_exa` for the official page    | firecrawl crawling/monitoring              |
+| Upstream, issue or PR investigation                  | `github`                                                                                      | `firecrawl.developer_search` for public code | `git` (local only)                         |
+| Website or UI verification                           | `playwright`                                                                                  | `firecrawl.scrape` for static text           | context-mode                               |
+| Git operations (local)                               | `git`                                                                                         | native shell `git` for porcelain output      | github write tools                         |
+| Large payload, or repeated queries over fetched docs | `context-mode` (`ctx_execute_file`, `ctx_index` + `ctx_search`)                               | —                                            | reading whole files into context           |
+| Deployment / runtime errors                          | Not covered: the `vercel` MCP is unreachable; report the gap instead of substituting a server | —                                            | any Vercel-hosted target                   |
+| Project knowledge and memories                       | `serena` memories (when present)                                                              | this file                                    | —                                          |
 
 **Rule:** pick the one server that owns the task. Add a second only when it adds
 information the first cannot provide. Never call a server "to be thorough".
+
+### Shell tooling — `rg` / `fd` before PowerShell cmdlets
+
+- Inside PowerShell, navigate with `fd` and search with `rg` wherever they can do the job
+  (both verified installed in this environment: ripgrep 15.1.0, fd 10.4.2). They are
+  faster than the PowerShell equivalents and their output is compact and filterable.
+  Use `fzf --filter` for piped fuzzy selection of already-produced lines; not the
+  interactive UI.
+- Reach for raw PowerShell (`Get-ChildItem`, `Select-String`, `Where-Object`, …) only for
+  what `fd` / `rg` cannot do: Windows assets (registry, services, ACLs, processes, env),
+  object manipulation that is not search at all, and paths that `fd`'s ignore rules hide.
+- Never re-shell a search whose results were already returned this session, and never let
+  `rg` / `fd` replace a search this file or a task's scope explicitly mandates through a
+  specific MCP tool (see §1 and the fff pointers rule above).
 
 ---
 
@@ -213,6 +245,13 @@ the bytes it saves.
 **Fidelity.** Context Mode summarises; it does not replace the source. Never take a
 type, signature, error message, field name or line reference from a summary — read the
 exact code before implementing against it, and keep the summary only as a map.
+
+### Code Mode discovery cost
+
+- One `search()` per unfamiliar namespace, with a capped `limit`, returned transformed to
+  the minimum fields (names only, unless a signature is needed) — not a raw dump.
+- Reuse discovery results for the rest of the session and never re-enumerate a namespace
+  already listed, mirroring the reuse rule for retrieved symbols and file content.
 
 ---
 
