@@ -19,7 +19,5 @@ export async function validateCloudTokenRequest(
 	return {
 		method: 'POST',
 		path: `cloud-tokens/${requireCloudTokenUuid(this, itemIndex)}/validate`,
-		// Validation is a read-only check against the provider - safe to retry
-		retrySafety: 'safe',
 	};
 }

@@ -4,6 +4,11 @@
  * The resource accepts exactly three fields for creation: provider, token, name.
  * Update accepts only name. List and Get send no body.
  * The token field contains sensitive credentials and must be masked.
+ *
+ * Note: The Coolify server applies `TrimStrings` middleware globally to all
+ * request fields, so leading and trailing whitespace in any string field
+ * (including token and name) will be removed by the server regardless of
+ * what the node sends. See cloudInitScriptFields.ts for the verified source.
  */
 import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
@@ -113,20 +118,18 @@ export function readCloudProvider(ctx: IExecuteFunctions, itemIndex: number): Cl
 
 /**
  * Read and validate the token value.
- * Returns empty string if not set (for update, where token is not accepted).
- * Does not trim the value to avoid silently altering provider credentials;
- * the Coolify server applies TrimStrings middleware to all request fields.
+ *
+ * Note: Does not trim the value to avoid silently altering provider credentials.
+ * However, the Coolify server applies TrimStrings middleware globally, so any
+ * leading or trailing whitespace will be removed by the server regardless.
+ * Users should not include whitespace in token values.
  */
 export function readTokenValue(
 	ctx: IExecuteFunctions,
 	itemIndex: number,
 	required: boolean,
 ): string {
-	const token = ctx.getNodeParameter(
-		CLOUD_TOKEN_FIELDS.token.apiName,
-		itemIndex,
-		'',
-	) as string;
+	const token = ctx.getNodeParameter(CLOUD_TOKEN_FIELDS.token.apiName, itemIndex, '') as string;
 
 	if (token === '') {
 		if (required) {
@@ -144,9 +147,11 @@ export function readTokenValue(
 
 /**
  * Read and validate the name value.
+ *
  * Trims the value because the Coolify server applies TrimStrings middleware
- * to all request fields, and a display name with surrounding whitespace
- * is not useful.
+ * globally to all request fields, and a display name with surrounding whitespace
+ * is not useful. Any leading or trailing whitespace will be removed by the
+ * server regardless.
  */
 export function readTokenName(
 	ctx: IExecuteFunctions,
@@ -182,10 +187,7 @@ export function buildCreateCloudTokenBody(ctx: IExecuteFunctions, itemIndex: num
  * Build the request body for the update endpoint.
  * The name is required; the API only accepts the name field for updates.
  */
-export function buildUpdateCloudTokenBody(
-	ctx: IExecuteFunctions,
-	itemIndex: number,
-): IDataObject {
+export function buildUpdateCloudTokenBody(ctx: IExecuteFunctions, itemIndex: number): IDataObject {
 	return {
 		name: readTokenName(ctx, itemIndex, true),
 	};
