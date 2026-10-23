@@ -97,7 +97,7 @@ jobs:
           echo "Publishing from tag: $tag"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ steps.tag.outputs.tag || github.ref }}
 
