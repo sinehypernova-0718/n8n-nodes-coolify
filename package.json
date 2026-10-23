@@ -6,7 +6,27 @@
 	"license": "MIT",
 	"homepage": "https://github.com/sinehypernova-0718/n8n-nodes-coolify#readme",
 	"keywords": [
-		"n8n-community-node-package"
+		"n8n",
+		"n8n-community-node",
+		"n8n-community-node-package",
+		"n8n-nodes",
+		"n8n-nodes-coolify",
+		"coolify",
+		"coolify-api",
+		"self-hosted",
+		"self-hosting",
+		"deployment",
+		"devops",
+		"server-management",
+		"application-management",
+		"cloud-init",
+		"audit-logs",
+		"automation",
+		"workflow-automation",
+		"continuous-deployment",
+		"infrastructure",
+		"platform-engineering",
+		"api-integration"
 	],
 	"author": {
 		"name": "sinehypernova-0718",
@@ -25,8 +45,6 @@
 		"dev": "n8n-node dev",
 		"lint": "n8n-node lint",
 		"lint:fix": "n8n-node lint --fix",
-		"test": "vitest run",
-		"test:watch": "vitest",
 		"release": "n8n-node release",
 		"release:local": "release-it",
 		"prepublishOnly": "n8n-node prerelease"
