@@ -9,9 +9,11 @@
  * disagree about a field.
  *
  * The contract was verified against the `VolumeBackupsController` of the
- * Coolify release v4.4.6: the endpoint accepts exactly the fourteen fields of
- * this contract, and the defaults the contract carries are the defaults the
- * endpoint applies.
+ * Coolify release v4.5.0: the endpoint accepts the fields of this contract
+ * together with the `frequency` the operation sends separately, and the
+ * defaults the contract carries are the defaults the endpoint applies.
+ * `s3_storage_uuids` is only published by recent Coolify 4.x releases, so an
+ * older instance may reject it.
  */
 
 import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
@@ -173,7 +175,7 @@ export const STORAGE_BACKUP_SCHEDULE_FIELDS: StorageBackupScheduleFieldSpec[] = 
 		apiName: 'retention_max_storage_locally',
 		displayName: 'Retention Max Storage Locally',
 		type: 'number',
-		description: 'Maximum size of the local backups in bytes, zero means no limit',
+		description: 'Maximum size of the local backups in gigabytes (GB), zero means no limit',
 		default: 0,
 		minValue: 0,
 		maxValue: 9_999_999_999,
@@ -207,7 +209,7 @@ export const STORAGE_BACKUP_SCHEDULE_FIELDS: StorageBackupScheduleFieldSpec[] = 
 		apiName: 'retention_max_storage_s3',
 		displayName: 'Retention Max Storage S3',
 		type: 'number',
-		description: 'Maximum size of the S3 backups in bytes, zero means no limit',
+		description: 'Maximum size of the S3 backups in gigabytes (GB), zero means no limit',
 		default: 0,
 		minValue: 0,
 		maxValue: 9_999_999_999,

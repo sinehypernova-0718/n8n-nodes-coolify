@@ -15,8 +15,10 @@
  * or sent without being shown.
  *
  * The contract was verified against the official OpenAPI specification and
- * the `ApplicationsController::create_application` implementation of the
- * Coolify release v4.4.6.
+ * the `ApplicationsController` of the Coolify release v4.5.0. Some of the
+ * fields below are only published by recent Coolify 4.x releases (for example
+ * `is_permanent_redirect_enabled`, `traefik_certificate_resolver` and the HTTP
+ * basic auth hash settings), so an older instance may reject them.
  */
 
 import { type IDataObject, type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';

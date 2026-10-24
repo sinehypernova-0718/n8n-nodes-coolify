@@ -18,13 +18,17 @@
  *
  * The contract was verified against the official OpenAPI specification and the
  * `ApplicationsController::update_by_uuid` implementation of the Coolify
- * release v4.4.6. The specification publishes six fields the implementation
- * rejects with a validation error, so they are not part of the contract:
+ * release v4.5.0. A few fields the specification publishes for this endpoint
+ * are not part of the contract:
  *
- * - `project_uuid`, `server_uuid`, `environment_name`, `github_app_uuid` and
- *   `destination_uuid` move the application and the update endpoint has no
- *   operation for that,
- * - `dockerfile` is only accepted by the creation endpoints.
+ * - `project_uuid`, `server_uuid`, `environment_name` and `destination_uuid`
+ *   are not part of the fields the endpoint accepts, so it rejects them and
+ *   they cannot be updated here,
+ * - `github_app_uuid` and `dockerfile` are accepted by the endpoint for some
+ *   applications, but the node does not expose them yet.
+ *
+ * Some of the remaining fields are only published by recent Coolify 4.x
+ * releases, so an older instance may reject them.
  */
 
 import { type IDataObject, type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
