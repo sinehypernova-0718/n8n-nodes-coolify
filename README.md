@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="n8n-logo-white-accent.svg" width="200" alt="n8n" />
+  <img src="n8n-logo-black-accent.svg" width="200" alt="n8n" />
 </p>
 
 <h1 align="center">n8n-nodes-coolify</h1>
@@ -24,6 +24,7 @@
 - **Application management** — 42 operations on the `Application` resource, including creation, lifecycle, environment variables, storages, backups, destinations, and tags.
 - **Audit events** — list the team audit events on the `Audit Event` resource, paginated and filterable.
 - **Cloud init scripts** — create, read, update, and delete the reusable cloud init scripts of the team on the `Cloud Init Script` resource.
+- **Cloud tokens** — list, inspect, create, rename, delete, and validate the cloud provider tokens of the team on the `Cloud Token` resource.
 - **Preview deployments** — open, list, inspect, and delete preview deployments for pull requests.
 - **Rate-limit aware transport** — one shared transport that honours the server's rate-limit headers and retries only requests that are safe to repeat.
 
@@ -35,31 +36,37 @@ n8n-nodes-coolify/
 │   └── CoolifyApi.credentials.ts
 ├── nodes/
 │   └── Coolify/
+│       ├── Coolify.node.ts
+│       ├── Coolify.node.json
 │       ├── descriptions/
-│       │   ├── ApplicationDescription.ts
-│       │   ├── applicationCreateFields.ts
-│       │   ├── applicationFieldProperties.ts
-│       │   ├── applicationUpdateFields.ts
+│       │   ├── Application/
+│       │   │   ├── ApplicationDescription.ts
+│       │   │   ├── applicationCreateFields.ts
+│       │   │   ├── applicationFieldProperties.ts
+│       │   │   ├── applicationUpdateFields.ts
+│       │   │   ├── storageBackupScheduleFields.ts
+│       │   │   └── index.ts
+│       │   ├── AuditEvent/
+│       │   ├── CloudInitScript/
+│       │   ├── CloudToken/
 │       │   └── index.ts
 │       ├── requests/
 │       │   ├── application/
 │       │   │   ├── <operation>.ts
 │       │   │   └── index.ts
+│       │   ├── auditEvent/
+│       │   ├── cloudInitScript/
+│       │   ├── cloudToken/
 │       │   ├── types.ts
 │       │   └── index.ts
-│       ├── shared/
-│       │   ├── apiRequest.ts
-│       │   └── rateLimit.ts
-│       └── Coolify.node.ts
-├── test/
-│   ├── apiRequest.test.ts
-│   ├── applicationDescription.test.ts
-│   ├── applicationRequests.test.ts
-│   └── rateLimit.test.ts
+│       └── shared/
+│           ├── apiRequest.ts
+│           └── rateLimit.ts
 ├── icons/
 │   └── coolify.svg
 ├── package.json
 ├── README.md
+├── CHANGELOG.md
 └── LICENSE.md
 ```
 
@@ -67,7 +74,7 @@ n8n-nodes-coolify/
 
 - **`credentials/`** — defines the Coolify API credential used to authenticate requests.
 - **`descriptions/`** — contains the resource and operation definitions displayed in the n8n editor. Its `index.ts` explicitly exports the descriptions consumed by the main node.
-- **`requests/application/`** — contains the request builders for the Coolify `Application` operations.
+- **`requests/<resource>/`** — contains the request builders of a resource; the node implements the `application`, `auditEvent`, `cloudInitScript` and `cloudToken` resources.
 - **`requests/<resource>/<operation>.ts`** — keeps individual API request builders in separate operation-specific modules, such as `list.ts`, `get.ts`, `createPublic.ts`, and `update.ts`.
 - **Resource `index.ts` files** — explicitly export the request builders belonging to each resource.
 - **`requests/index.ts`** — re-exports the resource-level barrels, providing a single import entry point for request modules.
@@ -102,7 +109,7 @@ The Coolify node exposes the supported Coolify API operations through n8n's reso
 
 ### Application
 
-The node exposes three resources — **Application**, with 42 operations, **Audit Event**, with the List operation, and **Cloud Init Script**, with 5 operations. The other Coolify resources (services, databases, servers, projects, deployments) are not exposed yet.
+The node exposes four resources — **Application**, with 42 operations, **Audit Event**, with the List operation, **Cloud Init Script**, with 5 operations, and **Cloud Token**, with 6 operations. The other Coolify resources (services, databases, servers, projects, deployments) are not exposed yet.
 
 Every operation is sent through the shared transport, so the rate limit and retry policy described below applies to all of them: reads are retried when the server reports a transient failure, writes are never repeated automatically.
 
@@ -234,6 +241,21 @@ Every operation is sent through the shared transport, so the rate limit and retr
 
 > **Note:** the list endpoint is not paginated, it returns every script of the team. Only team admins and owners can use the resource, a token without that access is expected to receive HTTP 403. The content of a script is returned only for a token with the `read:sensitive` or the `root` ability that also satisfies the team authorization policy of Coolify, in practice the caller has to be an admin or owner of the team; a token ability on its own does not make the content visible. `Update` changes only the fields that are filled in, an emptied field keeps the value the script has, the API has no way to clear a field and rejects a blank value with HTTP 422. The API stores the content of a script without its leading and trailing whitespace. `Delete` removes the script permanently.
 
+### Cloud Token
+
+#### Managing cloud provider tokens
+
+| Operation  | Description                                                             |
+| ---------- | ----------------------------------------------------------------------- |
+| `List`     | List the cloud provider tokens of the team                              |
+| `Get`      | Get a cloud provider token by UUID                                      |
+| `Create`   | Create a cloud provider token for a cloud provider                      |
+| `Update`   | Update the name of a cloud provider token by UUID                       |
+| `Delete`   | Delete a cloud provider token by UUID, the deletion is permanent        |
+| `Validate` | Validate a cloud provider token against the provider API                |
+
+> **Note:** only team admins and owners can use the resource, a token without that access is expected to receive HTTP 403. The Coolify API accepts the cloud providers `hetzner`, `digitalocean`, `vultr` and `hostinger`. The token value is a secret: it is validated against the provider before it is stored, and the API does not return it afterwards. `Update` changes only the name, the token value itself cannot be changed. A token that is used by a server cannot be deleted.
+
 Operation parameters, filters, and available fields vary by endpoint. Refer to the operation descriptions in the n8n editor and the [Coolify API documentation](https://coolify.io/docs/api/overview) for endpoint-specific requirements.
 
 This list describes the resources currently implemented in the integration. Additional resources and operations can be introduced in future releases.
@@ -258,7 +280,7 @@ The Coolify node authenticates against the Coolify REST API with an API token, s
 
 Before configuring the credential, you need:
 
-- A Coolify instance — either [Coolify Cloud](https://coolify.io/pricing) or your own self-hosted installation (version 4.3.0 or newer, see the Compatibility section).
+- A Coolify instance — either [Coolify Cloud](https://coolify.io/pricing) or your own self-hosted installation (see the Compatibility section for the supported Coolify version).
 - An API token created in Coolify under **Keys & Tokens → API Tokens**, scoped to the team you want to work with. The token carries the permissions selected at creation time (`read`, `write`, `root`), so create the least privileged token that covers your workflow. The token needs the **`read`** permission — a deploy-only token cannot be tested, because the credential test reads the team bound to the token.
 - On self-hosted instances, API access must be enabled by an administrator, and the caller must match the IP allowlist when one is configured.
 
@@ -288,7 +310,7 @@ This package is designed for n8n's community node ecosystem and uses the n8n nod
 - **Integration type:** n8n community node.
 - **Implementation language:** TypeScript.
 - **API:** Coolify API v1.
-- **Coolify version:** Depends on the target Coolify instance's API version. The credential test uses `GET /team`, the canonical endpoint for "the team bound to the token" in the [Coolify OpenAPI specification](https://github.com/coollabsio/coolify/blob/main/openapi.yaml). Whether a given endpoint or field is accepted depends on the version of Coolify you run; consult the Coolify API documentation for your instance and do not assume every field is supported by every stable release.
+- **Coolify version:** Depends on the target Coolify instance's API version. The credential test uses `GET /team`, the canonical endpoint for "the team bound to the token" in the [Coolify OpenAPI specification](https://github.com/coollabsio/coolify/blob/main/openapi.yaml); the credential documents this endpoint as available from Coolify 4.3.0. The request contracts of the operations were aligned against the Coolify OpenAPI specification of a recent Coolify 4.x release, and some operations send fields that only recent releases publish, so on an older instance those fields may be rejected. Whether a given endpoint or field is accepted therefore depends on the version of Coolify you run; consult the Coolify API documentation for your instance and do not assume every field is supported by every stable release. The exact minimum Coolify version supported by every operation is not verified in this repository and needs review.
 - **Authentication:** Coolify API token (Bearer), with the `read` permission.
 - **Package distribution:** npm — end users install the published package with the n8n community nodes interface, and npm remains the registry the package is published to.
 - **Development package manager:** pnpm — the repository is developed, built, and published with pnpm, pinned through the `packageManager` field in `package.json` and `pnpm-lock.yaml`.
@@ -351,8 +373,6 @@ pnpm install
 | `pnpm run build`         | Compile TypeScript to JavaScript for production (runs `n8n-node build`)                                                                 |
 | `pnpm run build:watch`   | Build in watch mode (auto-rebuild on changes)                                                                                           |
 | `pnpm run lint`          | Check your code for errors and style issues (runs `n8n-node lint`)                                                                      |
-| `pnpm run test`          | Run the unit tests (runs `vitest run`)                                                                                                  |
-| `pnpm run test:watch`    | Run the unit tests in watch mode (runs `vitest`)                                                                                        |
 | `pnpm run lint:fix`      | Automatically fix linting issues when possible (runs `n8n-node lint --fix`)                                                             |
 | `pnpm run release:local` | Create a release locally: bump the version, update the changelog, commit, tag (`vX.Y.Z`), and push — this triggers the publish workflow |
 | `pnpm run release`       | The publish entry point used by the GitHub Actions publish workflow: lints, builds, and publishes to npm with provenance                |
@@ -391,14 +411,26 @@ Releases are published by GitHub Actions, never from a local machine, so that ev
 
 ## 📝 Version history
 
-### v0.1.0
+### v0.1.2
+
+Adds the Cloud Token resource, introducing six operations for managing Coolify cloud provider tokens:
+
+- **List** — Retrieve cloud tokens.
+- **Get** — Retrieve a specific cloud token.
+- **Create** — Register a new cloud token.
+- **Update** — Update an existing cloud token.
+- **Delete** — Remove a cloud token.
+- **Validate** — Check whether a cloud token can authenticate with its configured cloud provider.
+
+### v0.1.1
 
 Initial pre-1.0 release of the Coolify integration for n8n.
 
-Introduces Application and Audit Event resources.
+Introduces Application, Audit Event, and Cloud Init Script resources.
 Adds Coolify API token authentication for API requests.
 Includes application creation, lifecycle, environment variables, storages, backups, destinations, tags, preview deployments, and logs operations.
 Includes audit event listing with pagination.
+Includes the cloud init script operations.
 Includes rate-limit aware transport and operation-specific request handling where implemented.
 This release establishes the initial integration structure, with further Coolify resources and operations available for future development.
 
