@@ -16,6 +16,25 @@ import { NodeOperationError } from 'n8n-workflow';
 import { CLOUD_PROVIDER_OPTIONS, type CloudProvider } from './types';
 
 /**
+ * The label of every cloud provider in the editor.
+ *
+ * A record over the providers the API accepts, so a provider added to
+ * {@link CLOUD_PROVIDER_OPTIONS} cannot be reachable without a label here.
+ */
+const CLOUD_PROVIDER_LABELS: Record<CloudProvider, string> = {
+	hetzner: 'Hetzner',
+	digitalocean: 'DigitalOcean',
+	vultr: 'Vultr',
+	hostinger: 'Hostinger',
+};
+
+/**
+ * The choices of the cloud provider control, in the order the API lists them.
+ */
+const CLOUD_PROVIDER_SELECT_OPTIONS: ReadonlyArray<{ name: string; value: CloudProvider }> =
+	CLOUD_PROVIDER_OPTIONS.map((value) => ({ name: CLOUD_PROVIDER_LABELS[value], value }));
+
+/**
  * The contract of a single field of a cloud token request.
  */
 export interface CloudTokenFieldSpec {
@@ -27,8 +46,8 @@ export interface CloudTokenFieldSpec {
 	type: 'string' | 'options';
 	/** The description of the field in the editor. */
 	description: string;
-	/** For options type, the available values. */
-	options?: readonly string[];
+	/** The choices of an options control. */
+	options?: ReadonlyArray<{ name: string; value: string }>;
 	/** Whether this is a secret field that should be masked. */
 	secret?: boolean;
 }
@@ -42,7 +61,7 @@ export const CLOUD_TOKEN_FIELDS: Record<CloudTokenFieldSpec['apiName'], CloudTok
 		displayName: 'Cloud Provider',
 		type: 'options',
 		description: 'The cloud provider this token is for',
-		options: CLOUD_PROVIDER_OPTIONS,
+		options: CLOUD_PROVIDER_SELECT_OPTIONS,
 	},
 	token: {
 		apiName: 'token',
@@ -69,6 +88,10 @@ export function cloudTokenFieldSpecs(): CloudTokenFieldSpec[] {
 
 /**
  * The editor control of a cloud token field.
+ *
+ * The choices of an options control belong to the `options` property of the
+ * parameter, so that is where they are set. `typeOptions` only carries the
+ * control modifiers, here the password mask of the token field.
  */
 export function cloudTokenFieldProperty(spec: CloudTokenFieldSpec): INodeProperties {
 	const base: INodeProperties = {
@@ -79,17 +102,12 @@ export function cloudTokenFieldProperty(spec: CloudTokenFieldSpec): INodePropert
 		description: spec.description,
 	};
 
-	const typeOptions: INodeProperties['typeOptions'] = {};
+	if (spec.options) {
+		base.options = spec.options.map((option) => ({ name: option.name, value: option.value }));
+	}
 
 	if (spec.secret) {
-		typeOptions.password = true;
-	}
-	if (spec.options) {
-		typeOptions.options = spec.options;
-	}
-
-	if (Object.keys(typeOptions).length > 0) {
-		base.typeOptions = typeOptions;
+		base.typeOptions = { password: true };
 	}
 
 	return base;
