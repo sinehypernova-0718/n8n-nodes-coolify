@@ -1,6 +1,6 @@
 {
 	"name": "@sinehypernova-0718/n8n-nodes-coolify",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"packageManager": "pnpm@12.4.2",
 	"description": "An n8n community node for managing Coolify applications, deployments, databases, services, and infrastructure through workflows.",
 	"license": "MIT",
