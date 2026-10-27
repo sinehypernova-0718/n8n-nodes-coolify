@@ -1,5 +1,5 @@
 {
-	"node": "n8n-nodes-coolify",
+	"node": "@sinehypernova-0718/n8n-nodes-coolify.coolify",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Development", "Utility"],
@@ -14,5 +14,21 @@
 				"url": "https://github.com/sinehypernova-0718/n8n-nodes-coolify?tab=readme-ov-file"
 			}
 		]
-	}
+	},
+	"alias": [
+		"DevOps",
+		"Coollabs",
+		"Development",
+		"CI/CD",
+		"CI",
+		"CD",
+		"Continuous integration",
+		"Continuous delivery",
+		"Continuous deployment",
+		"Continuous development",
+		"Deployment",
+		"Self-hosted",
+		"Selfhosted",
+		"PaaS"
+	]
 }
