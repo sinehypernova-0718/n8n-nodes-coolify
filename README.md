@@ -49,6 +49,7 @@ n8n-nodes-coolify/
 │       │   ├── AuditEvent/
 │       │   ├── CloudInitScript/
 │       │   ├── CloudToken/
+│       │   ├── Database/
 │       │   └── index.ts
 │       ├── requests/
 │       │   ├── application/
@@ -57,6 +58,7 @@ n8n-nodes-coolify/
 │       │   ├── auditEvent/
 │       │   ├── cloudInitScript/
 │       │   ├── cloudToken/
+│       │   ├── database/
 │       │   ├── types.ts
 │       │   └── index.ts
 │       └── shared/
@@ -74,7 +76,7 @@ n8n-nodes-coolify/
 
 - **`credentials/`** — defines the Coolify API credential used to authenticate requests.
 - **`descriptions/`** — contains the resource and operation definitions displayed in the n8n editor. Its `index.ts` explicitly exports the descriptions consumed by the main node.
-- **`requests/<resource>/`** — contains the request builders of a resource; the node implements the `application`, `auditEvent`, `cloudInitScript` and `cloudToken` resources.
+- **`requests/<resource>/`** — contains the request builders of a resource; the node implements the `application`, `auditEvent`, `cloudInitScript`, `cloudToken` and `database` resources.
 - **`requests/<resource>/<operation>.ts`** — keeps individual API request builders in separate operation-specific modules, such as `list.ts`, `get.ts`, `createPublic.ts`, and `update.ts`.
 - **Resource `index.ts` files** — explicitly export the request builders belonging to each resource.
 - **`requests/index.ts`** — re-exports the resource-level barrels, providing a single import entry point for request modules.
@@ -109,7 +111,7 @@ The Coolify node exposes the supported Coolify API operations through n8n's reso
 
 ### Application
 
-The node exposes four resources — **Application**, with 42 operations, **Audit Event**, with the List operation, **Cloud Init Script**, with 5 operations, and **Cloud Token**, with 6 operations. The other Coolify resources (services, databases, servers, projects, deployments) are not exposed yet.
+The node exposes five resources — **Application**, with 42 operations, **Audit Event**, with the List operation, **Cloud Init Script**, with 5 operations, **Cloud Token**, with 6 operations, and **Database**, with 17 operations. The other Coolify resources (services, servers, projects, deployments) are not exposed yet.
 
 Every operation is sent through the shared transport, so the rate limit and retry policy described below applies to all of them: reads are retried when the server reports a transient failure, writes are never repeated automatically.
 
@@ -245,16 +247,66 @@ Every operation is sent through the shared transport, so the rate limit and retr
 
 #### Managing cloud provider tokens
 
-| Operation  | Description                                                             |
-| ---------- | ----------------------------------------------------------------------- |
-| `List`     | List the cloud provider tokens of the team                              |
-| `Get`      | Get a cloud provider token by UUID                                      |
-| `Create`   | Create a cloud provider token for a cloud provider                      |
-| `Update`   | Update the name of a cloud provider token by UUID                       |
-| `Delete`   | Delete a cloud provider token by UUID, the deletion is permanent        |
-| `Validate` | Validate a cloud provider token against the provider API                |
+| Operation  | Description                                                      |
+| ---------- | ---------------------------------------------------------------- |
+| `List`     | List the cloud provider tokens of the team                       |
+| `Get`      | Get a cloud provider token by UUID                               |
+| `Create`   | Create a cloud provider token for a cloud provider               |
+| `Update`   | Update the name of a cloud provider token by UUID                |
+| `Delete`   | Delete a cloud provider token by UUID, the deletion is permanent |
+| `Validate` | Validate a cloud provider token against the provider API         |
 
 > **Note:** only team admins and owners can use the resource, a token without that access is expected to receive HTTP 403. The Coolify API accepts the cloud providers `hetzner`, `digitalocean`, `vultr` and `hostinger`. The token value is a secret: it is validated against the provider before it is stored, and the API does not return it afterwards. `Update` changes only the name, the token value itself cannot be changed. A token that is used by a server cannot be deleted.
+
+### Database
+
+The Database resource exposes the standalone databases of a Coolify team through 17 operations. Service databases — the databases nested inside a service — are a different resource and are not part of this one.
+
+#### Reading databases
+
+| Operation  | Description                                |
+| ---------- | ------------------------------------------ |
+| `List`     | List every standalone database of the team |
+| `Get`      | Get a single database by UUID              |
+| `Get Logs` | Get the container logs of a database       |
+
+> **Note:** `List` returns every database of the team in one array; the endpoint is not paginated. Passwords, connection URLs and init scripts are returned only for a token with the `read:sensitive` or the `root` ability, and only when the team authorization policy allows it. `Get Logs` needs the same ability and is answered with HTTP 400 while the database has no running container.
+
+#### Creating databases
+
+| Operation             | Description                                       |
+| --------------------- | ------------------------------------------------- |
+| `Create (PostgreSQL)` | Create a PostgreSQL database                      |
+| `Create (MySQL)`      | Create a MySQL database                           |
+| `Create (MariaDB)`    | Create a MariaDB database                         |
+| `Create (MongoDB)`    | Create a MongoDB database                         |
+| `Create (Redis)`      | Create a Redis database                           |
+| `Create (Clickhouse)` | Create a Clickhouse database                      |
+| `Create (DragonFly)`  | Create a DragonFly database                       |
+| `Create (KeyDB)`      | Create a KeyDB database                           |
+| `Create (SQLite)`     | Create a SQLite database, requires Coolify v4.4.0 |
+
+> **Note:** every creation operation needs the project UUID and the server UUID, and at least one of the environment name and the environment UUID. The destination UUID is required when the server has more than one destination. The API generates the credentials a request leaves out, but the creation endpoint returns the UUID of the new database; the generated passwords are returned by `Get`, and only for a token with the `read:sensitive` or the `root` ability. `Instant Deploy` needs a token with the `deploy` ability. `Create (SQLite)` requires Coolify v4.4.0 or later and publishes no public access fields, so its operation does not offer them. The MongoDB creation schema does not publish the root password or the initial database, so set them with `Update` after the database exists.
+
+> **Note:** the six configuration fields (`postgres_conf`, `mysql_conf`, `mariadb_conf`, `mongo_conf`, `redis_conf` and `keydb_conf`) are entered as plain text. The node Base64-encodes the exact UTF-8 content of the field before it sends the request, because the API expects it that way, so the configuration keeps its line breaks and whitespace.
+
+> **Note:** a database is made public by switching `Public` on and supplying a `Public Port` between 1024 and 65535. The node rejects a public database without a valid port before the request is sent, because Coolify silently keeps the database private when the port is missing.
+
+#### Lifecycle
+
+| Operation | Description                                                              |
+| --------- | ------------------------------------------------------------------------ |
+| `Update`  | Update the settings of a database, only the settings that are set change |
+| `Start`   | Start a database                                                         |
+| `Stop`    | Stop a database                                                          |
+| `Restart` | Restart a database                                                       |
+| `Delete`  | Delete a database                                                        |
+
+> **Note:** `Start`, `Stop` and `Restart` queue the operation on the server: the API accepts the request and returns a message, it does not wait for the database to reach the new state. Starting a running database and stopping a stopped database are answered with HTTP 400, a concurrent start, restart or import with HTTP 409, and a missing prerequisite with HTTP 422. The three operations are never retried automatically.
+
+> **Note:** `Update` sends only the settings the user changed. A boolean is a three-state control (Unchanged, Enabled, Disabled) and a number is sent only when a value is entered, so an untouched setting keeps its current value. Enabling `Public` requires a public port in the same request, the same rule as creation. The operation renders one settings collection per engine, because the request does not carry the type of the database; a field that belongs to another engine is answered with HTTP 422. An empty description field keeps the current description, the node has no way to clear it. Three fields of the published update schema (`redact_all_env_values_in_logs`, `include_coolify_default_variables` and `is_log_drain_enabled`) are rejected by the API with HTTP 422 and are not offered.
+
+> **Note:** `Delete` queues the deletion and removes the database from the API immediately. The four switches mirror the query flags of the endpoint and all default to `true`; they decide whether the configurations, the volumes, the connected networks and the Docker cleanup are removed. Deleting the volumes destroys the stored data, and the deletion cannot be undone.
 
 Operation parameters, filters, and available fields vary by endpoint. Refer to the operation descriptions in the n8n editor and the [Coolify API documentation](https://coolify.io/docs/api/overview) for endpoint-specific requirements.
 
@@ -299,7 +351,7 @@ The credential test calls `GET /team` against the configured base URL — the en
 
 The configured token covers the read and write permissions used by the current implementation. Individual operations may still require a specific ability, team access, or an additional API permission.
 
-Deployment, rollback, and preview deployment operations need a token with the `deploy` ability, and the log operations need the `read:sensitive` or the `root` ability.
+Deployment, rollback, preview deployment and database lifecycle operations need a token with the `deploy` ability: that covers application deployments, database start, stop, restart and delete, and a database creation or update that is asked to start or restart the database or to change its public access. The log operations, including `Get Logs` of a database, need the `read:sensitive` or the `root` ability.
 
 Keep your token private. Never commit credentials to the repository or include tokens in issue reports, screenshots, or logs.
 
@@ -310,7 +362,7 @@ This package is designed for n8n's community node ecosystem and uses the n8n nod
 - **Integration type:** n8n community node.
 - **Implementation language:** TypeScript.
 - **API:** Coolify API v1.
-- **Coolify version:** Depends on the target Coolify instance's API version. The credential test uses `GET /team`, the canonical endpoint for "the team bound to the token" in the [Coolify OpenAPI specification](https://github.com/coollabsio/coolify/blob/main/openapi.yaml); the credential documents this endpoint as available from Coolify 4.3.0. The request contracts of the operations were aligned against the Coolify OpenAPI specification of a recent Coolify 4.x release, and some operations send fields that only recent releases publish, so on an older instance those fields may be rejected. Whether a given endpoint or field is accepted therefore depends on the version of Coolify you run; consult the Coolify API documentation for your instance and do not assume every field is supported by every stable release. The exact minimum Coolify version supported by every operation is not verified in this repository and needs review.
+- **Coolify version:** Depends on the target Coolify instance's API version. The credential test uses `GET /team`, the canonical endpoint for "the team bound to the token" in the [Coolify OpenAPI specification](https://github.com/coollabsio/coolify/blob/main/openapi.yaml); the credential documents this endpoint as available from Coolify 4.3.0. The request contracts of the operations were aligned against the Coolify OpenAPI specification of a recent Coolify 4.x release, and some operations send fields that only recent releases publish, so on an older instance those fields may be rejected. Whether a given endpoint or field is accepted therefore depends on the version of Coolify you run; consult the Coolify API documentation for your instance and do not assume every field is supported by every stable release. The database creation contract and the database update exclusions were verified against the Coolify v4.5.1 OpenAPI specification and controller; `Create (SQLite)`, which is absent from v4.3.0, requires Coolify v4.4.0 or later. The exact minimum Coolify version supported by every other operation is not verified in this repository and needs review.
 - **Authentication:** Coolify API token (Bearer), with the `read` permission.
 - **Package distribution:** npm — end users install the published package with the n8n community nodes interface, and npm remains the registry the package is published to.
 - **Development package manager:** pnpm — the repository is developed, built, and published with pnpm, pinned through the `packageManager` field in `package.json` and `pnpm-lock.yaml`.
@@ -340,7 +392,7 @@ If an operation fails:
 
 - Verify that the Coolify credential is configured with the right base URL and a valid token.
 - Confirm that the token has the permission the operation needs (`read`, `write`, `deploy`, `read:sensitive`, or `root`).
-- Check that the supplied application UUIDs exist and are accessible to the team bound to the token.
+- Check that the supplied application, database and other resource UUIDs exist and are accessible to the team bound to the token.
 - On self-hosted instances, verify that API access is enabled and that the caller matches the IP allowlist.
 - Verify required fields and supported parameter values.
 - Review the error returned by n8n and consult the relevant Coolify API documentation.

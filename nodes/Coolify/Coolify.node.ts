@@ -15,12 +15,14 @@ import {
 	auditEventFields,
 	cloudInitScriptFields,
 	cloudTokenFields,
+	databaseFields,
 } from './descriptions';
 import {
 	applicationRequestBuilders,
 	auditEventRequestBuilders,
 	cloudInitScriptRequestBuilders,
 	cloudTokenRequestBuilders,
+	databaseRequestBuilders,
 	type CoolifyRequestBuilder,
 } from './requests';
 import { coolifyApiRequest } from './shared/apiRequest';
@@ -64,6 +66,7 @@ const resourceRequestBuilders: Record<string, Record<string, CoolifyRequestBuild
 	auditEvent: auditEventRequestBuilders,
 	cloudInitScript: cloudInitScriptRequestBuilders,
 	cloudToken: cloudTokenRequestBuilders,
+	database: databaseRequestBuilders,
 };
 
 /**
@@ -75,6 +78,7 @@ const resourceLabels: Record<string, string> = {
 	auditEvent: 'Audit Event',
 	cloudInitScript: 'Cloud Init Script',
 	cloudToken: 'Cloud Token',
+	database: 'Database',
 };
 
 export class Coolify implements INodeType {
@@ -89,7 +93,7 @@ export class Coolify implements INodeType {
 		version: 1,
 		subtitle: '={{$parameter["operation"]}}',
 		description:
-			'Manage Coolify applications, audit events, cloud init scripts and cloud tokens from your n8n workflows.',
+			'Manage Coolify applications, audit events, cloud init scripts, cloud tokens and databases from your n8n workflows.',
 		defaults: {
 			name: 'Coolify',
 		},
@@ -129,6 +133,11 @@ export class Coolify implements INodeType {
 						value: 'cloudToken',
 						description: 'Manage the cloud provider tokens of a Coolify team',
 					},
+					{
+						name: 'Database',
+						value: 'database',
+						description: 'Manage the databases of a Coolify team',
+					},
 				],
 				default: 'application',
 			},
@@ -136,6 +145,7 @@ export class Coolify implements INodeType {
 			...auditEventFields,
 			...cloudInitScriptFields,
 			...cloudTokenFields,
+			...databaseFields,
 		],
 	};
 
