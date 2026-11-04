@@ -463,6 +463,20 @@ Releases are published by GitHub Actions, never from a local machine, so that ev
 
 ## 📝 Version history
 
+### v0.1.3
+
+Adds the Database resource, introducing 17 operations for managing standalone Coolify databases:
+
+- **List** — Retrieve the standalone databases of the team.
+- **Get** — Retrieve a single database by UUID.
+- **Get Logs** — Retrieve the container logs of a database.
+- **Create (PostgreSQL/MySQL/MariaDB/MongoDB/Redis/Clickhouse/DragonFly/KeyDB/SQLite)** — Create a database on a server of the project.
+- **Update** — Update the settings of a database by UUID.
+- **Start**, **Stop**, **Restart** — Queue a lifecycle operation on a database.
+- **Delete** — Delete a database and its volumes, configurations, networks and Docker images.
+
+The release also repairs the Coolify node metadata alias list and updates the engineering playbook to reflect the repository's test-free policy.
+
 ### v0.1.2
 
 Adds the Cloud Token resource, introducing six operations for managing Coolify cloud provider tokens:
