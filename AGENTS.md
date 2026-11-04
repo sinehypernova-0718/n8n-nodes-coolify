@@ -283,10 +283,9 @@ Hand-written sources:
 - `nodes/Coolify/shared/rateLimit.ts` — the retry / rate-limit policy, deliberately free
   of `n8n-workflow` imports so it can be unit-tested in isolation.
 - `credentials/CoolifyApi.credentials.ts` — the `coolifyApi` credential.
-- `test/apiRequest.test.ts`, `test/rateLimit.test.ts` — vitest suites mirroring the two
-  shared modules.
-- `test/applicationRequests.test.ts`, `test/applicationDescription.test.ts` — the
-  request-builder and description suites of the `Applications` resource.
+- No test suite is configured: the former `test/*.test.ts` vitest suites were removed in
+  #12, and the package has no `test` script. Do not re-add a test framework without an
+  explicit engineering justification; rely on the verification gates in §6 instead.
 
 ### Transport invariant
 
@@ -479,53 +478,46 @@ description; read them before writing one:
 
 ### Test coverage and known gaps
 
-- Covered: the whole retry policy (`rateLimit.ts`: failure classification, delay
-  computation, header parsing, default safety, policy constants) and the transport
-  behaviour (`apiRequest.ts`: retry vs no-retry per method and safety, budget exhaustion,
-  wait-source fallbacks, error shape, cancellation, non-parallel retries).
-- Covered: the request builders of the `Applications` resource
-  (`test/applicationRequests.test.ts`) and the description of the resource
-  (`test/applicationDescription.test.ts`).
-- The **parity test** in `test/applicationDescription.test.ts` is authoritative: the
-  operation values of the description and the keys of `applicationRequestBuilders`
-  must be the same set. Extend it when an operation is added; never weaken it.
-- The **editor state tests** in `test/applicationDescription.test.ts` evaluate the
-  display options with the display logic of n8n itself
-  (`NodeHelpers.displayParameter`), not with a hand written approximation. They
-  assert that no field is shown twice in a state of the editor, that a creation
-  variant shows the fields of its own contract only, and that the editor shows
-  exactly the fields a request sends. Extend them when a field or a variant is
-  added; never weaken them.
-- A field of a creation variant is rendered once per variant, so the same
-  property name can occur several times in the description. The copies are
-  mutually exclusive through `displayOptions.show.operation`, and n8n keeps
-  them apart, so they are not a duplicate. Keep the order of the fields of a
-  variant, and merge the fields of the variants only when the order of every
-  variant stays the same.
+- Covered: this is a test-free package (§6, no test suite or script exists), so these notes
+  describe the behaviour that the verification gates have to exercise rather than suites that
+  still run:
+  - the whole retry policy (`rateLimit.ts`: failure classification, delay computation, header
+    parsing, default safety, policy constants) and the transport behaviour (`apiRequest.ts`:
+    retry vs no-retry per method and safety, budget exhaustion, wait-source fallbacks, error
+    shape, cancellation, non-parallel retries).
+  - the request builders of the `Applications` resource and the description of the resource.
+- The operation values of the description and the keys of `applicationRequestBuilders` must be
+  the same set. Reconcile the two files whenever an operation is added or removed; never
+  shrink the check.
+- The display options of every operation are rendered with the display logic of n8n itself
+  (`NodeHelpers.displayParameter`), not a hand-written approximation. They have to keep
+  asserting that no field is shown twice in a state of the editor, that a creation variant
+  shows the fields of its own contract only, and that the editor shows exactly the fields a
+  request sends. Extend them rather than weakening them if a description file is added in
+  the future.
+- A field of a creation variant is rendered once per variant, so the same property name can
+  occur several times in the description. The copies are mutually exclusive through
+  `displayOptions.show.operation`, and n8n keeps them apart, so they are not a duplicate.
+  Keep the order of the fields of a variant, and merge the fields of the variants only when
+  the order of every variant stays the same.
 - Gaps — do not assume coverage: the credential module, the node class itself, and any
-  end-to-end path through a real n8n runtime are untested. A change in those areas needs
-  a new test; a change to shared policy needs the mirrored suite updated.
-- Test style: vitest `describe` / `it` with sentence-style names that describe behaviour
-  ("it('retries a read on a transient server error')"), and inline fakes/stubs
-  (`createRuntime`, `createContext` in `test/apiRequest.test.ts`) — no external mock
-  framework; time and randomness are injected for determinism.
+  end-to-end path through a real n8n runtime are unverified. A change in those areas needs
+  verification; a change to shared policy needs the manual review of its edge cases.
 
 ### Commands
 
-| Purpose                        | Command                                                                   |
-| ------------------------------ | ------------------------------------------------------------------------- |
-| Install                        | `pnpm install`                                                            |
-| Lint                           | `pnpm run lint` (eslint via `n8n-node lint`; autofix `pnpm run lint:fix`) |
-| Tests                          | `pnpm run test` (watch: `pnpm run test:watch`)                            |
-| Single test file               | `pnpm exec vitest run test/rateLimit.test.ts`                             |
-| Build                          | `pnpm run build` (watch: `pnpm run build:watch`)                          |
-| Type check only                | `pnpm exec tsc --noEmit` (does **not** cover `test/`)                     |
-| Format check                   | `pnpm exec prettier --check .` (only when formatting was touched)         |
-| Local n8n with the node loaded | `pnpm run dev`                                                            |
-| Local release                  | `pnpm run release:local` (CI publish entry point: `pnpm run release`)     |
+| Purpose                        | Command                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------ |
+| Install                        | `pnpm install`                                                                 |
+| Lint                           | `pnpm run lint` (eslint via `n8n-node lint`; autofix `pnpm run lint:fix`)      |
+| Build                          | `pnpm run build` (watch: `pnpm run build:watch`)                               |
+| Type check only                | `pnpm exec tsc --noEmit` (use the local compiler; no `test/` directory exists) |
+| Format check                   | `pnpm exec prettier --check .` (only when formatting was touched)              |
+| Local n8n with the node loaded | `pnpm run dev`                                                                 |
+| Local release                  | `pnpm run release:local` (CI publish entry point: `pnpm run release`)          |
 
-CI runs `lint` → `test` → `build` on pull requests and on pushes to `master`;
-`publish.yml` publishes to npm on `v*.*.*` tags. The default branch is `master`, not
+CI runs `lint` → `build` on pull requests and on pushes to `master` (there is no test script
+in this repository); `publish.yml` publishes to npm on `v*.*.*` tags. The default branch is `master`, not
 `main`. Node.js ≥ 22 is required.
 
 ---
@@ -533,22 +525,14 @@ CI runs `lint` → `test` → `build` on pull requests and on pushes to `master`
 ## 6. Testing and completion criteria
 
 1. **Choose the scope of the checks.**
-   - Documentation or comment-only change → no test run; state that explicitly.
-   - `rateLimit.ts` change → `pnpm exec vitest run test/rateLimit.test.ts`.
-   - `apiRequest.ts` change → `pnpm exec vitest run test/apiRequest.test.ts`.
-   - Change in `nodes/` or `credentials/` → `pnpm run test` (full suite).
-   - Change in `descriptions/` or `requests/` → `pnpm exec vitest run
-test/applicationRequests.test.ts test/applicationDescription.test.ts`, then the
-     full suite.
-   - Anything that can ship → `pnpm run lint` **and** `pnpm run test` **and**
-     `pnpm run build`; add a Prettier check of the **changed files** if formatting
-     was touched.
-   - Scope the Prettier check to the changed files. The repository is kept
-     formatted with `prettier --write .`; a file that is being edited at the
-     same time can still make the repository-wide check fail. Do not reformat a
-     file you did not change — report the failure instead.
-   - Configuration- or documentation-only change (this file, OpenCode/Serena config,
-     memories) → a build is not justified; verify the configuration instead (see below).
+   - Documentation, AGENTS or comment-only change → no source build required; verify formatting/config if touched, state that explicitly.
+   - `rateLimit.ts` change → review the manual policy edge cases (transient status set, wait source precedence, budget) and run the local type check.
+   - `apiRequest.ts` change → review error shape, retry safety selection, cancellation and budget handling, and run the local type check.
+   - Change in `nodes/` or `credentials/` → `pnpm run lint` and `pnpm run build`.
+   - Change in `descriptions/` or `requests/` → reconcile the description operation values with the request-builder registry and run `pnpm run lint` and `pnpm run build`.
+   - Anything that can ship → `pnpm run lint` **and** `pnpm run build`, using the local TypeScript compiler for type verification, plus a Prettier check of the **changed files** if formatting was touched.
+   - Scope the Prettier check to the changed files. The repository is kept formatted with `prettier --write .`; a file that is being edited at the same time can still make the repository-wide check fail. Do not reformat a file you did not change — report the failure instead.
+   - Configuration- or documentation-only change (this file, OpenCode/Serena config, memories) → a build is not justified; verify the configuration instead (see below).
 2. **Never weaken a test to make it pass.** Fix the code, or report the conflict.
 3. **Check the request contract, not only the tests.** A test that repeats a wrong
    expectation passes. After changing a request builder, run the compiled builder and
