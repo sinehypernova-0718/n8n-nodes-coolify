@@ -11,28 +11,10 @@ import type { CoolifyRequest } from '../types';
 const MAX_FILTER_LENGTH = 255;
 
 /**
- * Lowest page size the Coolify API accepts.
- */
-const MIN_PER_PAGE = 1;
-
-/**
- * Highest page size the Coolify API accepts.
- */
-const MAX_PER_PAGE = 100;
-
-/**
- * Lowest page number the Coolify API accepts.
- */
-const MIN_PAGE = 1;
-
-/**
- * Build the request that lists a page of the audit events of the team.
+ * Build the filtered request used to list the audit events of the team.
  *
- * Coolify returns one page per request as a paginator object with the fields
- * `current_page`, `data`, `per_page`, `last_page` and `total`, so the response
- * is returned unchanged and no page is fetched automatically. Only the
- * filters the user configured are part of the query: an unset filter is
- * absent from the request, so the API applies its own behaviour.
+ * Pagination is handled by the node execution path. Only configured filters
+ * are included here, leaving the API's pagination parameters to that path.
  *
  * @param this The execution context of the node.
  * @param itemIndex Index of the input item the request belongs to.
@@ -55,29 +37,6 @@ export async function listAuditEventsRequest(
 		}
 	}
 
-	const perPage = this.getNodeParameter('perPage', itemIndex, null) as number | null;
-
-	if (
-		perPage !== null &&
-		(!Number.isInteger(perPage) || perPage < MIN_PER_PAGE || perPage > MAX_PER_PAGE)
-	) {
-		throw new NodeOperationError(
-			this.getNode(),
-			`Items per page must be an integer between ${MIN_PER_PAGE} and ${MAX_PER_PAGE}`,
-			{ itemIndex },
-		);
-	}
-
-	const page = this.getNodeParameter('page', itemIndex, null) as number | null;
-
-	if (page !== null && (!Number.isInteger(page) || page < MIN_PAGE)) {
-		throw new NodeOperationError(
-			this.getNode(),
-			`Page must be an integer of ${MIN_PAGE} or higher`,
-			{ itemIndex },
-		);
-	}
-
 	const source = this.getNodeParameter('source', itemIndex, '') as string;
 
 	const request: CoolifyRequest = {
@@ -95,13 +54,6 @@ export async function listAuditEventsRequest(
 	if (source !== '') {
 		qs.source = source;
 	}
-	if (perPage !== null) {
-		qs.per_page = perPage;
-	}
-	if (page !== null) {
-		qs.page = page;
-	}
-
 	if (Object.keys(qs).length > 0) {
 		request.qs = qs;
 	}

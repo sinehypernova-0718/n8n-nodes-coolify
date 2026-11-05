@@ -24,6 +24,7 @@ import {
 	cloudTokenRequestBuilders,
 	databaseRequestBuilders,
 	type CoolifyRequestBuilder,
+	type CoolifyRequest,
 } from './requests';
 import { coolifyApiRequest } from './shared/apiRequest';
 
@@ -80,6 +81,153 @@ const resourceLabels: Record<string, string> = {
 	cloudToken: 'Cloud Token',
 	database: 'Database',
 };
+
+/** Maximum page size documented by the Coolify audit events endpoint. */
+const AUDIT_EVENT_PAGE_SIZE = 100;
+
+/** Default number of audit events returned when Return All is disabled. */
+const DEFAULT_AUDIT_EVENT_LIMIT = 50;
+
+/** Type guard for object entries returned by Coolify. */
+function isDataObject(value: unknown): value is IDataObject {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Fetch and validate the paginated audit event list. */
+async function fetchAuditEvents(
+	ctx: IExecuteFunctions,
+	request: CoolifyRequest,
+	itemIndex: number,
+	returnAll: boolean,
+	limit: number,
+): Promise<IDataObject[]> {
+	if (!returnAll && (!Number.isSafeInteger(limit) || limit < 1)) {
+		throw new NodeOperationError(ctx.getNode(), 'Limit must be a positive integer', { itemIndex });
+	}
+
+	const perPage = returnAll ? AUDIT_EVENT_PAGE_SIZE : Math.min(limit, AUDIT_EVENT_PAGE_SIZE);
+	const auditEvents: IDataObject[] = [];
+	let page = 1;
+	let lastPage: number | undefined;
+	let total: number | undefined;
+
+	while (lastPage === undefined || page <= lastPage) {
+		const response = await coolifyApiRequest(ctx, request.method, request.path, {
+			qs: { ...request.qs, page, per_page: perPage },
+			body: request.body,
+			retrySafety: request.retrySafety,
+		});
+
+		if (!isDataObject(response) || !Array.isArray(response.data)) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'Coolify returned an invalid audit event paginator response',
+				{
+					itemIndex,
+				},
+			);
+		}
+
+		const responseLastPage = response.last_page;
+		const responseTotal = response.total;
+		const currentPage = response.current_page;
+		if (
+			typeof responseLastPage !== 'number' ||
+			!Number.isSafeInteger(responseLastPage) ||
+			responseLastPage < 1
+		) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'Coolify returned an invalid audit event last_page value',
+				{
+					itemIndex,
+				},
+			);
+		}
+		if (
+			typeof currentPage !== 'number' ||
+			!Number.isSafeInteger(currentPage) ||
+			currentPage < 1 ||
+			currentPage !== page
+		) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'Coolify returned an unexpected audit event page',
+				{
+					itemIndex,
+				},
+			);
+		}
+		if (
+			typeof responseTotal !== 'number' ||
+			!Number.isSafeInteger(responseTotal) ||
+			responseTotal < 0 ||
+			responseLastPage !== Math.max(1, Math.ceil(responseTotal / perPage))
+		) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'Coolify returned invalid audit event pagination metadata',
+				{
+					itemIndex,
+				},
+			);
+		}
+
+		if (lastPage !== undefined && (responseLastPage !== lastPage || responseTotal !== total)) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'Coolify audit event pagination metadata changed during retrieval',
+				{
+					itemIndex,
+				},
+			);
+		}
+		lastPage = responseLastPage;
+		total = responseTotal;
+
+		const events = response.data.filter(isDataObject);
+		if (events.length !== response.data.length || events.length > perPage) {
+			throw new NodeOperationError(ctx.getNode(), 'Coolify returned invalid audit event entries', {
+				itemIndex,
+			});
+		}
+		const expectedPageEvents = Math.min(perPage, Math.max(0, responseTotal - (page - 1) * perPage));
+		if (events.length === 0 && expectedPageEvents > 0) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'Coolify returned an empty audit event page before the reported last page',
+				{ itemIndex },
+			);
+		}
+		if (events.length !== expectedPageEvents) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'Coolify returned an incomplete audit event page for the reported total',
+				{ itemIndex },
+			);
+		}
+
+		const remaining = returnAll ? events.length : limit - auditEvents.length;
+		auditEvents.push(...events.slice(0, remaining));
+		if (events.length === 0 || (!returnAll && auditEvents.length >= limit) || page >= lastPage) {
+			break;
+		}
+
+		page += 1;
+	}
+
+	if (returnAll && auditEvents.length !== total) {
+		throw new NodeOperationError(
+			ctx.getNode(),
+			'Coolify returned fewer audit events than its paginator reported',
+			{
+				itemIndex,
+			},
+		);
+	}
+
+	return auditEvents;
+}
 
 export class Coolify implements INodeType {
 	description: INodeTypeDescription = {
@@ -177,6 +325,19 @@ export class Coolify implements INodeType {
 				}
 
 				const request = await buildRequest.call(this, i);
+
+				if (resource === 'auditEvent' && operation === 'list') {
+					const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
+					const limit = this.getNodeParameter('limit', i, DEFAULT_AUDIT_EVENT_LIMIT) as number;
+					const auditEvents = await fetchAuditEvents(this, request, i, returnAll, limit);
+
+					returnData.push(
+						...this.helpers.constructExecutionMetaData(this.helpers.returnJsonArray(auditEvents), {
+							itemData: { item: i },
+						}),
+					);
+					continue;
+				}
 
 				const response = await coolifyApiRequest(this, request.method, request.path, {
 					qs: request.qs,

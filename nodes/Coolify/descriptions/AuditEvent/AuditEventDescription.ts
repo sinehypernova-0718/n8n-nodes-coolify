@@ -33,33 +33,24 @@ export const auditEventFields: INodeProperties[] = [
 	// ----------------------------------
 	//        auditEvent:list
 	// ----------------------------------
-	// The optional numbers carry `default: null`, which describes a parameter
-	// the user never set. n8n resolves such a parameter through lodash `get`
-	// with the fallback `null` the request builder passes, so an untouched or
-	// cleared field is omitted from the query while `0` is returned as `0` —
-	// see `listAuditEventsRequest`.
 	{
-		displayName: 'Items Per Page',
-		name: 'perPage',
-		type: 'number',
-		default: null,
-		typeOptions: {
-			minValue: 1,
-			maxValue: 100,
-		},
+		displayName: 'Return All',
+		name: 'returnAll',
+		type: 'boolean',
+		default: false,
 		displayOptions: {
 			show: {
 				resource: ['auditEvent'],
 				operation: ['list'],
 			},
 		},
-		description: 'Number of audit events to return in one page, between 1 and 100',
+		description: 'Whether to return all results or only up to a given limit',
 	},
 	{
-		displayName: 'Page',
-		name: 'page',
+		displayName: 'Limit',
+		name: 'limit',
 		type: 'number',
-		default: null,
+		default: 50,
 		typeOptions: {
 			minValue: 1,
 		},
@@ -67,9 +58,10 @@ export const auditEventFields: INodeProperties[] = [
 			show: {
 				resource: ['auditEvent'],
 				operation: ['list'],
+				returnAll: [false],
 			},
 		},
-		description: 'Page number of the audit events to return',
+		description: 'Max number of results to return',
 	},
 	{
 		displayName: 'Search',
