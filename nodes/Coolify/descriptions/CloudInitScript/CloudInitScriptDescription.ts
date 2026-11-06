@@ -74,23 +74,6 @@ const cloudInitScriptProperties: INodeProperties[] = [
 	//     cloudInitScript:delete
 	// ----------------------------------
 	{
-		displayName: 'Warning',
-		name: 'deleteWarning',
-		type: 'notice',
-		typeOptions: {
-			width: 400,
-		},
-		default: '',
-		displayOptions: {
-			show: {
-				resource: ['cloudInitScript'],
-				operation: ['delete'],
-			},
-		},
-		description:
-			'Deleting the script removes it together with its content. That cannot be undone from the API.',
-	},
-	{
 		displayName: 'Cloud Init Script UUID',
 		name: 'cloudInitScriptUuid',
 		type: 'resourceLocator',

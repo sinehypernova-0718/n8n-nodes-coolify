@@ -91,7 +91,7 @@ const databaseProperties: INodeProperties[] = [
 				name: 'Delete',
 				value: 'delete',
 				description:
-					'Delete a database and queue the removal of its containers, volumes and networks. The deletion cannot be undone.',
+					'Delete a database and queue the removal of its containers, volumes and networks. Coolify stops the containers; the options control removal of volumes, configuration, connected networks and Docker cleanup. The deletion cannot be undone.',
 				action: 'Delete a database',
 			},
 			{
@@ -154,23 +154,6 @@ const databaseProperties: INodeProperties[] = [
 	// ----------------------------------
 	//     database:delete
 	// ----------------------------------
-	{
-		displayName: 'Warning',
-		name: 'deleteWarning',
-		type: 'notice',
-		typeOptions: {
-			width: 400,
-		},
-		default: '',
-		displayOptions: {
-			show: {
-				resource: ['database'],
-				operation: ['delete'],
-			},
-		},
-		description:
-			'Deleting the database stops its containers and removes the resource. The flags below decide whether the volumes, the configurations, the connected networks and the Docker cleanup are removed as well, and the deletion cannot be undone.',
-	},
 	{
 		displayName: 'Database UUID',
 		name: 'databaseUuid',

@@ -79,23 +79,6 @@ export const cloudTokenFields: INodeProperties[] = [
 	//     cloudToken:delete
 	// ----------------------------------
 	{
-		displayName: 'Warning',
-		name: 'deleteWarning',
-		type: 'notice',
-		typeOptions: {
-			width: 400,
-		},
-		default: '',
-		displayOptions: {
-			show: {
-				resource: ['cloudToken'],
-				operation: ['delete'],
-			},
-		},
-		description:
-			'Deleting the cloud provider token removes it permanently. This cannot be undone. Note: tokens that are used by any servers cannot be deleted.',
-	},
-	{
 		displayName: 'Cloud Token UUID',
 		name: 'uuid',
 		type: 'string',
