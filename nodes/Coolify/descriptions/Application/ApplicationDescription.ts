@@ -3,6 +3,7 @@ import type { INodeProperties } from 'n8n-workflow';
 import { applicationCreateDescription } from './applicationCreateFields';
 import { applicationUpdateDescription } from './applicationUpdateFields';
 import { storageBackupScheduleDescription } from './storageBackupScheduleFields';
+import { groupOptionalParameters } from '../parameterCollections';
 
 /**
  * Description of the Coolify application resource.
@@ -11,7 +12,7 @@ import { storageBackupScheduleDescription } from './storageBackupScheduleFields'
  * An operation is only listed here once its request builder exists, so the
  * editor never offers an operation that the node cannot execute.
  */
-export const applicationFields: INodeProperties[] = [
+const applicationProperties: INodeProperties[] = [
 	{
 		displayName: 'Operation',
 		name: 'operation',
@@ -294,8 +295,17 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Tag',
 		name: 'tag',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchTags', searchable: true },
+			},
+			{ displayName: 'By Name', name: 'name', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -311,9 +321,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -344,9 +363,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -363,7 +391,7 @@ export const applicationFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['application'],
-				operation: ['delete'],
+				operation: ['legacy'],
 			},
 		},
 		description: 'Whether to delete the configuration of the application',
@@ -376,7 +404,7 @@ export const applicationFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['application'],
-				operation: ['delete'],
+				operation: ['legacy'],
 			},
 		},
 		description: 'Whether to delete the volumes of the application',
@@ -389,7 +417,7 @@ export const applicationFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['application'],
-				operation: ['delete'],
+				operation: ['legacy'],
 			},
 		},
 		description:
@@ -403,21 +431,70 @@ export const applicationFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['application'],
-				operation: ['delete'],
+				operation: ['legacy'],
 			},
 		},
 		description: 'Whether to delete the networks the application is connected to',
 	},
 
 	// ----------------------------------
+	{
+		displayName: 'Deletion Options',
+		name: 'applicationDeleteOptions',
+		type: 'collection',
+		default: {},
+		description: 'Optional deletion flags. The API defaults each flag to true.',
+		displayOptions: { show: { resource: ['application'], operation: ['delete'] } },
+		options: [
+			{
+				displayName: 'Delete Configurations',
+				name: 'deleteConfigurations',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to delete the configuration of the application',
+			},
+			{
+				displayName: 'Delete Volumes',
+				name: 'deleteVolumes',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to delete the volumes of the application',
+			},
+			{
+				displayName: 'Docker Cleanup',
+				name: 'dockerCleanup',
+				type: 'boolean',
+				default: true,
+				description:
+					'Whether Docker cleanup runs when the disk usage reaches its cleanup threshold',
+			},
+			{
+				displayName: 'Delete Connected Networks',
+				name: 'deleteConnectedNetworks',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to delete the networks the application is connected to',
+			},
+		],
+	},
+	// ----------------------------------
 	//      application:listEnvs
 	// ----------------------------------
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -433,9 +510,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -451,9 +537,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -469,9 +564,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -487,9 +591,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -505,9 +618,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -523,9 +645,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -557,11 +688,33 @@ export const applicationFields: INodeProperties[] = [
 	//      application:createTag
 	// ----------------------------------
 	{
+		displayName: 'Tag Representation',
+		name: 'tagRepresentation',
+		type: 'options',
+		default: 'tagName',
+		required: true,
+		options: [
+			{ name: 'Tag Name', value: 'tagName' },
+			{ name: 'Tag Names', value: 'tagNames' },
+		],
+		displayOptions: { show: { resource: ['application'], operation: ['createTag'] } },
+		description: 'Choose whether to add one tag name or several tag names',
+	},
+	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -571,36 +724,43 @@ export const applicationFields: INodeProperties[] = [
 		description: 'UUID of the application the tag is added to',
 	},
 	{
-		displayName: 'Tag Name',
+		displayName: 'Tag Name or ID',
 		name: 'tagName',
-		type: 'string',
-		default: '',
-		displayOptions: {
-			show: {
-				resource: ['application'],
-				operation: ['createTag'],
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchTags', searchable: true },
 			},
-		},
+			{ displayName: 'By Name', name: 'name', type: 'string' },
+		],
 		description:
-			'Name of the tag to add. Provide either Tag Name or Tag Names, not both. Coolify lowercases the name and removes HTML tags before it stores it.',
+			'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+		displayOptions: {
+			show: { resource: ['application'], operation: ['createTag'], tagRepresentation: ['tagName'] },
+		},
 	},
 	{
-		displayName: 'Tag Names',
+		displayName: 'Tag Name or ID',
 		name: 'tagNames',
-		type: 'string',
+		type: 'options',
 		typeOptions: {
 			multipleValues: true,
-			multipleValueButtonText: 'Add Tag Name',
+			loadOptionsMethod: 'getTagNames',
 		},
 		default: [],
 		displayOptions: {
 			show: {
 				resource: ['application'],
 				operation: ['createTag'],
+				tagRepresentation: ['tagNames'],
 			},
 		},
 		description:
-			'Names of the tags to add. Provide either Tag Name or Tag Names, not both. Coolify lowercases the names and removes HTML tags before it stores them.',
+			'Names of the tags to add. Provide either Tag Name or Tag Names, not both. Coolify lowercases the names and removes HTML tags before it stores them. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 	},
 
 	// ----------------------------------
@@ -609,9 +769,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -641,9 +810,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -758,9 +936,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -860,9 +1047,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -892,9 +1088,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -936,9 +1141,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -984,9 +1198,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1068,9 +1291,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1184,9 +1416,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1298,9 +1539,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1327,12 +1577,22 @@ export const applicationFields: INodeProperties[] = [
 	// ----------------------------------
 	//    application:addDestination
 	// ----------------------------------
+	serverLocatorField('addDestination'),
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1344,9 +1604,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Destination UUID',
 		name: 'destinationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchDestinations', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1359,12 +1628,22 @@ export const applicationFields: INodeProperties[] = [
 	// ----------------------------------
 	//   application:removeDestination
 	// ----------------------------------
+	serverLocatorField('removeDestination'),
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1376,9 +1655,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Destination UUID',
 		name: 'destinationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchDestinations', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1394,9 +1682,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1428,9 +1725,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1476,9 +1782,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1541,9 +1856,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1573,9 +1897,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1728,9 +2061,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1780,9 +2122,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -1945,9 +2296,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -2005,9 +2365,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -2080,12 +2449,22 @@ export const applicationFields: INodeProperties[] = [
 	// ----------------------------------
 	//        application:clone
 	// ----------------------------------
+	serverLocatorField('clone'),
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -2097,9 +2476,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Destination UUID',
 		name: 'destinationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchDestinations', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -2139,6 +2527,7 @@ export const applicationFields: INodeProperties[] = [
 	// ----------------------------------
 	//       application:migrate
 	// ----------------------------------
+	serverLocatorField('migrate'),
 	{
 		displayName:
 			'Migrating stops the application, transfers the volume data only when both servers are managed by Coolify, and needs a deployment of the application after it completes',
@@ -2158,9 +2547,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -2172,9 +2570,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Destination UUID',
 		name: 'destinationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchDestinations', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -2204,9 +2611,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -2236,9 +2652,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -2284,9 +2709,18 @@ export const applicationFields: INodeProperties[] = [
 	{
 		displayName: 'Application UUID',
 		name: 'applicationUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchApplications', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['application'],
@@ -2316,3 +2750,25 @@ export const applicationFields: INodeProperties[] = [
 	// ----------------------------------
 	...applicationCreateDescription(),
 ];
+
+export const applicationFields = groupOptionalParameters(applicationProperties, 'application');
+
+function serverLocatorField(operation: string): INodeProperties {
+	return {
+		displayName: 'Server UUID',
+		name: 'serverUuid',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchServers', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
+		displayOptions: { show: { resource: ['application'], operation: [operation] } },
+		description: 'Server that contains the destination',
+	};
+}

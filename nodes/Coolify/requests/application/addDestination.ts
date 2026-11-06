@@ -2,6 +2,7 @@ import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
 import { requireApplicationUuid } from './parameters';
+import { locatorValue } from '../../shared/locatorValue';
 
 /**
  * Build the request that attaches an additional destination to an application.
@@ -20,8 +21,8 @@ export async function addDestinationRequest(
 		'add a destination to an application',
 	);
 
-	const destinationUuid = (
-		this.getNodeParameter('destinationUuid', itemIndex, '') as string
+	const destinationUuid = locatorValue(
+		this.getNodeParameter('destinationUuid', itemIndex, ''),
 	).trim();
 	if (!destinationUuid) {
 		throw new NodeOperationError(

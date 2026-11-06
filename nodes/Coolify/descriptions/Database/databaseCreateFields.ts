@@ -54,12 +54,14 @@ export function databaseCreateDescription(): INodeProperties[] {
 	const allCreateOperations = DATABASE_ENGINES.map((engine) => DATABASE_CREATE_OPERATIONS[engine]);
 
 	for (const spec of DATABASE_CREATE_SHARED_FIELDS) {
+		if (spec.apiName === 'environment_name' || spec.apiName === 'environment_uuid') continue;
 		properties.push({
 			...databaseFieldProperty(spec),
 			...(spec.required ? { required: true } : {}),
 			displayOptions: showDatabaseFor(allCreateOperations),
 		});
 	}
+	properties.push(...environmentSelectorFields(allCreateOperations));
 
 	for (const engine of DATABASE_ENGINES) {
 		for (const spec of DATABASE_ENGINE_FIELDS[engine]) {
@@ -97,4 +99,74 @@ export function databaseCreateDescription(): INodeProperties[] {
 	});
 
 	return properties;
+}
+
+function environmentSelectorFields(operations: string[]): INodeProperties[] {
+	const common = { resource: ['database'], operation: operations };
+	return [
+		// Version 1 identified the environment through a separate selector.
+		{
+			displayName: 'Environment Selection',
+			name: 'environmentMode',
+			type: 'options',
+			default: 'fromList',
+			required: true,
+			options: [
+				{ name: 'From List', value: 'fromList' },
+				{ name: 'By Name', value: 'byName' },
+				{ name: 'By UUID', value: 'byUuid' },
+			],
+			description: 'Choose how the environment is identified',
+			displayOptions: { show: { ...common, '@version': [1] } },
+		},
+		{
+			displayName: 'Environment Name or ID',
+			name: 'environmentNameFromList',
+			type: 'options',
+			default: '',
+			required: true,
+			typeOptions: { loadOptionsMethod: 'getEnvironments' },
+			description:
+				'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+			displayOptions: { show: { ...common, environmentMode: ['fromList'], '@version': [1] } },
+		},
+		{
+			displayName: 'Environment Name',
+			name: 'environmentName',
+			type: 'string',
+			default: '',
+			required: true,
+			description: 'Exact name of the environment',
+			displayOptions: { show: { ...common, environmentMode: ['byName'], '@version': [1] } },
+		},
+		{
+			displayName: 'Environment UUID',
+			name: 'environmentUuid',
+			type: 'string',
+			default: '',
+			required: true,
+			description: 'UUID of the environment',
+			displayOptions: { show: { ...common, environmentMode: ['byUuid'], '@version': [1] } },
+		},
+		// Version 2 selects the environment through a resource locator, like the server.
+		{
+			displayName: 'Environment Name or ID',
+			name: 'environment',
+			type: 'resourceLocator',
+			default: { mode: 'list', value: '' },
+			required: true,
+			modes: [
+				{
+					displayName: 'From List',
+					name: 'list',
+					type: 'list',
+					typeOptions: { searchListMethod: 'searchEnvironments', searchable: true },
+				},
+				{ displayName: 'By UUID', name: 'id', type: 'string' },
+			],
+			description:
+				'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+			displayOptions: { show: { ...common, '@version': [2] } },
+		},
+	];
 }

@@ -2,6 +2,7 @@ import { type IExecuteFunctions } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
 import { requireApplicationUuid } from './parameters';
+import { getCollectionParameter } from '../../shared/parameterResolution';
 
 /**
  * Build the request that deletes an application.
@@ -21,27 +22,17 @@ export async function deleteApplicationRequest(
 ): Promise<CoolifyRequest> {
 	const applicationUuid = requireApplicationUuid(this, itemIndex, 'delete an application');
 
-	const deleteConfigurations = this.getNodeParameter(
-		'deleteConfigurations',
-		itemIndex,
-		true,
-	) as boolean;
-	const deleteVolumes = this.getNodeParameter('deleteVolumes', itemIndex, true) as boolean;
-	const dockerCleanup = this.getNodeParameter('dockerCleanup', itemIndex, true) as boolean;
-	const deleteConnectedNetworks = this.getNodeParameter(
-		'deleteConnectedNetworks',
-		itemIndex,
-		true,
-	) as boolean;
+	const readFlag = (name: string) =>
+		getCollectionParameter(this, itemIndex, 'applicationDeleteOptions', name, name, true) === true;
 
 	return {
 		method: 'DELETE',
 		path: `applications/${applicationUuid}`,
 		qs: {
-			delete_configurations: deleteConfigurations,
-			delete_volumes: deleteVolumes,
-			docker_cleanup: dockerCleanup,
-			delete_connected_networks: deleteConnectedNetworks,
+			delete_configurations: readFlag('deleteConfigurations'),
+			delete_volumes: readFlag('deleteVolumes'),
+			docker_cleanup: readFlag('dockerCleanup'),
+			delete_connected_networks: readFlag('deleteConnectedNetworks'),
 		},
 		retrySafety: 'unsafe',
 	};

@@ -1,4 +1,5 @@
 import type { INodeProperties } from 'n8n-workflow';
+import { groupOptionalParameters } from '../parameterCollections';
 
 /**
  * Description of the Coolify audit event resource.
@@ -7,7 +8,7 @@ import type { INodeProperties } from 'n8n-workflow';
  * An operation is only listed here once its request builder exists, so the
  * editor never offers an operation that the node cannot execute.
  */
-export const auditEventFields: INodeProperties[] = [
+const auditEventProperties: INodeProperties[] = [
 	{
 		displayName: 'Operation',
 		name: 'operation',
@@ -138,3 +139,5 @@ export const auditEventFields: INodeProperties[] = [
 			'Source the audit event originated from. Any Source leaves the filter unset, All sends source=all explicitly.',
 	},
 ];
+
+export const auditEventFields = groupOptionalParameters(auditEventProperties, 'auditEvent');

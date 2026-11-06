@@ -24,6 +24,7 @@ export const APPLICATION_UPDATE_OPERATION = 'update';
  * The display name of every collection of the update operation.
  */
 const COLLECTION_DISPLAY_NAMES: Record<string, string> = {
+	source: 'Source Settings',
 	common: 'Application Settings',
 	deployment: 'Deployment Settings',
 	build: 'Build Settings',
@@ -52,7 +53,7 @@ export function applicationUpdateDescription(): INodeProperties[] {
 
 	// The settings that are rendered at the top level.
 	for (const spec of specs) {
-		if (spec.group !== 'identity' && spec.group !== 'source') {
+		if (spec.group !== 'identity') {
 			continue;
 		}
 

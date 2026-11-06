@@ -27,6 +27,7 @@
  */
 
 import { type IDataObject, type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
+import { getCollectionParameter } from '../../shared/parameterResolution';
 
 import {
 	databaseFieldUiName,
@@ -484,14 +485,18 @@ export function buildUpdateDatabaseBody(ctx: IExecuteFunctions, itemIndex: numbe
 	}
 
 	for (const group of databaseUpdateCollections()) {
-		const values = (ctx.getNodeParameter(group.collection, itemIndex, {}) ?? {}) as IDataObject;
-
 		for (const spec of group.specs) {
 			const uiName = databaseFieldUiName(spec.apiName);
-			if (!(uiName in values)) {
-				continue;
-			}
-			applyUpdateField(body, spec, values[uiName], ctx, itemIndex);
+			const value = getCollectionParameter(
+				ctx,
+				itemIndex,
+				group.collection,
+				uiName,
+				uiName,
+				undefined,
+			);
+			if (value === undefined) continue;
+			applyUpdateField(body, spec, value, ctx, itemIndex);
 		}
 	}
 

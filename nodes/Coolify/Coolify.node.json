@@ -2,10 +2,7 @@
 	"node": "@sinehypernova-0718/n8n-nodes-coolify.coolify",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
-	"categories": [
-		"Development",
-		"Utility"
-	],
+	"categories": ["Development", "Utility"],
 	"resources": {
 		"credentialDocumentation": [
 			{
@@ -18,11 +15,5 @@
 			}
 		]
 	},
-	"alias": [
-		"Coolify",
-		"Coollabs",
-		"Coollabs.io",
-		"Coolify API",
-		"Coolify deployment platform"
-	]
+	"alias": ["Coolify", "Coollabs", "Coollabs.io", "Coolify API", "Coolify deployment platform"]
 }

@@ -2,6 +2,7 @@ import type { IExecuteFunctions } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
 import { requireDatabaseUuid } from './parameters';
+import { getCollectionParameter } from '../../shared/parameterResolution';
 
 /**
  * Build the request that deletes a database.
@@ -20,17 +21,17 @@ export async function deleteDatabaseRequest(
 	itemIndex: number,
 ): Promise<CoolifyRequest> {
 	const databaseUuid = requireDatabaseUuid(this, itemIndex, 'delete a database');
+	const readFlag = (name: string) =>
+		getCollectionParameter(this, itemIndex, 'databaseDeleteOptions', name, name, true) === true;
 
 	return {
 		method: 'DELETE',
 		path: `databases/${databaseUuid}`,
 		qs: {
-			delete_configurations:
-				this.getNodeParameter('deleteConfigurations', itemIndex, true) === true,
-			delete_volumes: this.getNodeParameter('deleteVolumes', itemIndex, true) === true,
-			docker_cleanup: this.getNodeParameter('dockerCleanup', itemIndex, true) === true,
-			delete_connected_networks:
-				this.getNodeParameter('deleteConnectedNetworks', itemIndex, true) === true,
+			delete_configurations: readFlag('deleteConfigurations'),
+			delete_volumes: readFlag('deleteVolumes'),
+			docker_cleanup: readFlag('dockerCleanup'),
+			delete_connected_networks: readFlag('deleteConnectedNetworks'),
 		},
 	};
 }

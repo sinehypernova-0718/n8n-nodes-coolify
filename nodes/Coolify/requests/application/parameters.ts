@@ -1,6 +1,7 @@
 import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import { encodePathSegment } from '../../shared/pathSegment';
+import { locatorValue } from '../../shared/locatorValue';
 
 /**
  * Pattern an environment variable key has to match in the Coolify API.
@@ -30,7 +31,9 @@ export function requireApplicationUuid(
 	itemIndex: number,
 	purpose: string,
 ): string {
-	const applicationUuid = (ctx.getNodeParameter('applicationUuid', itemIndex, '') as string).trim();
+	const applicationUuid = locatorValue(
+		ctx.getNodeParameter('applicationUuid', itemIndex, ''),
+	).trim();
 
 	if (!applicationUuid) {
 		throw new NodeOperationError(ctx.getNode(), `Application UUID is required to ${purpose}`, {

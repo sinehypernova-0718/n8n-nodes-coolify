@@ -2,6 +2,7 @@ import type { INodeProperties } from 'n8n-workflow';
 
 import { databaseCreateDescription } from './databaseCreateFields';
 import { databaseUpdateDescription } from './databaseUpdateFields';
+import { groupOptionalParameters } from '../parameterCollections';
 
 /**
  * Description of the Coolify database resource.
@@ -10,7 +11,7 @@ import { databaseUpdateDescription } from './databaseUpdateFields';
  * operation is only listed here once its request builder exists, so the
  * editor never offers an operation that the node cannot execute.
  */
-export const databaseFields: INodeProperties[] = [
+const databaseProperties: INodeProperties[] = [
 	{
 		displayName: 'Operation',
 		name: 'operation',
@@ -173,9 +174,18 @@ export const databaseFields: INodeProperties[] = [
 	{
 		displayName: 'Database UUID',
 		name: 'databaseUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchDatabases', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['database'],
@@ -192,7 +202,7 @@ export const databaseFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['database'],
-				operation: ['delete'],
+				operation: ['legacy'],
 			},
 		},
 		description: 'Whether the configuration files of the database are deleted',
@@ -205,7 +215,7 @@ export const databaseFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['database'],
-				operation: ['delete'],
+				operation: ['legacy'],
 			},
 		},
 		description: 'Whether the networks the database is connected to are deleted',
@@ -218,7 +228,7 @@ export const databaseFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['database'],
-				operation: ['delete'],
+				operation: ['legacy'],
 			},
 		},
 		description: 'Whether the volumes of the database are deleted. The stored data is lost.',
@@ -231,7 +241,7 @@ export const databaseFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['database'],
-				operation: ['delete'],
+				operation: ['legacy'],
 			},
 		},
 		description:
@@ -239,14 +249,63 @@ export const databaseFields: INodeProperties[] = [
 	},
 
 	// ----------------------------------
+	{
+		displayName: 'Deletion Options',
+		name: 'databaseDeleteOptions',
+		type: 'collection',
+		default: {},
+		description: 'Optional deletion flags. The API defaults each flag to true.',
+		displayOptions: { show: { resource: ['database'], operation: ['delete'] } },
+		options: [
+			{
+				displayName: 'Delete Configurations',
+				name: 'deleteConfigurations',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to delete the configuration files of the database',
+			},
+			{
+				displayName: 'Delete Connected Networks',
+				name: 'deleteConnectedNetworks',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to delete the networks the database is connected to',
+			},
+			{
+				displayName: 'Delete Volumes',
+				name: 'deleteVolumes',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to delete the volumes of the database',
+			},
+			{
+				displayName: 'Docker Cleanup',
+				name: 'dockerCleanup',
+				type: 'boolean',
+				default: true,
+				description:
+					'Whether Docker cleanup runs when the disk usage reaches its cleanup threshold',
+			},
+		],
+	},
+	// ----------------------------------
 	//     database:get
 	// ----------------------------------
 	{
 		displayName: 'Database UUID',
 		name: 'databaseUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchDatabases', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['database'],
@@ -262,9 +321,18 @@ export const databaseFields: INodeProperties[] = [
 	{
 		displayName: 'Database UUID',
 		name: 'databaseUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchDatabases', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['database'],
@@ -314,9 +382,18 @@ export const databaseFields: INodeProperties[] = [
 	{
 		displayName: 'Database UUID',
 		name: 'databaseUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchDatabases', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['database'],
@@ -332,9 +409,18 @@ export const databaseFields: INodeProperties[] = [
 	{
 		displayName: 'Database UUID',
 		name: 'databaseUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchDatabases', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['database'],
@@ -350,9 +436,18 @@ export const databaseFields: INodeProperties[] = [
 	{
 		displayName: 'Database UUID',
 		name: 'databaseUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchDatabases', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['database'],
@@ -382,9 +477,18 @@ export const databaseFields: INodeProperties[] = [
 	{
 		displayName: 'Database UUID',
 		name: 'databaseUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchDatabases', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['database'],
@@ -395,3 +499,5 @@ export const databaseFields: INodeProperties[] = [
 	},
 	...databaseUpdateDescription(),
 ];
+
+export const databaseFields = groupOptionalParameters(databaseProperties, 'database');

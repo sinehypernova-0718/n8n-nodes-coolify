@@ -43,6 +43,12 @@ export function defaultValue(spec: ApplicationFieldSpec): INodeProperties['defau
  * The editor control of a field.
  */
 export function fieldProperty(spec: ApplicationFieldSpec): INodeProperties {
+	const resourceLocatorMethod: Record<string, string> = {
+		project_uuid: 'searchProjects',
+		server_uuid: 'searchServers',
+		destination_uuid: 'searchDestinations',
+	};
+	const listMethod = resourceLocatorMethod[spec.apiName];
 	const typeOptions: INodeProperties['typeOptions'] = {};
 
 	if (spec.secret) {
@@ -52,8 +58,13 @@ export function fieldProperty(spec: ApplicationFieldSpec): INodeProperties {
 		typeOptions.rows = spec.rows;
 	}
 	if (spec.type === 'stringList') {
-		typeOptions.multipleValues = true;
-		typeOptions.multipleValueButtonText = 'Add Value';
+		if (spec.apiName === 'tags') {
+			typeOptions.multipleValues = true;
+			typeOptions.loadOptionsMethod = 'getTagNames';
+		} else {
+			typeOptions.multipleValues = true;
+			typeOptions.multipleValueButtonText = 'Add Value';
+		}
 	}
 	if (spec.type === 'number') {
 		if (spec.minValue !== undefined) {
@@ -67,13 +78,28 @@ export function fieldProperty(spec: ApplicationFieldSpec): INodeProperties {
 	return {
 		displayName: spec.displayName,
 		name: applicationFieldUiName(spec.apiName),
-		type:
-			spec.type === 'stringList'
-				? 'string'
-				: spec.type === 'composeDomains'
-					? 'collection'
-					: spec.type,
-		default: defaultValue(spec),
+		type: listMethod
+			? 'resourceLocator'
+			: spec.apiName === 'tags'
+				? 'options'
+				: spec.type === 'stringList'
+					? 'string'
+					: spec.type === 'composeDomains'
+						? 'collection'
+						: spec.type,
+		default: listMethod ? { mode: 'list', value: '' } : defaultValue(spec),
+		modes: listMethod
+			? ([
+					{
+						displayName: 'From List',
+						name: 'list',
+						type: 'list',
+						default: '',
+						typeOptions: { searchListMethod: listMethod, searchable: true },
+					},
+					{ displayName: 'By UUID', name: 'id', type: 'string', default: '' },
+				] as unknown as INodeProperties['modes'])
+			: undefined,
 		description: spec.description,
 		typeOptions: Object.keys(typeOptions).length > 0 ? typeOptions : undefined,
 		options: spec.type === 'options' ? spec.options : undefined,

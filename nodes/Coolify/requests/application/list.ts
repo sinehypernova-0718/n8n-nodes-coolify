@@ -1,6 +1,7 @@
 import type { IExecuteFunctions } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
+import { locatorValue } from '../../shared/locatorValue';
 
 /**
  * Build the request that lists the applications of the team.
@@ -13,7 +14,7 @@ export async function listApplicationsRequest(
 	this: IExecuteFunctions,
 	itemIndex: number,
 ): Promise<CoolifyRequest> {
-	const tag = (this.getNodeParameter('tag', itemIndex, '') as string).trim();
+	const tag = locatorValue(this.getNodeParameter('tag', itemIndex, '')).trim();
 
 	const request: CoolifyRequest = {
 		method: 'GET',

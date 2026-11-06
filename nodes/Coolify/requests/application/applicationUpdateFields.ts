@@ -32,6 +32,7 @@
  */
 
 import { type IDataObject, type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
+import { getCollectionParameter } from '../../shared/parameterResolution';
 
 import {
 	applicationFieldSpecs,
@@ -175,6 +176,7 @@ export const APPLICATION_UPDATE_BOOLEAN_OPTIONS = [
  * The groups of the update contract that the editor renders as a collection.
  */
 export const APPLICATION_UPDATE_COLLECTION_GROUPS = [
+	'source',
 	'common',
 	'deployment',
 	'build',
@@ -196,6 +198,7 @@ export type ApplicationUpdateCollectionGroup =
  * The collection that holds the optional settings of a group.
  */
 export const APPLICATION_UPDATE_COLLECTIONS: Record<ApplicationUpdateCollectionGroup, string> = {
+	source: 'updateSourceSettings',
 	common: 'updateApplicationSettings',
 	deployment: 'updateDeploymentSettings',
 	build: 'updateBuildSettings',
@@ -390,8 +393,7 @@ export function buildUpdateApplicationBody(ctx: IExecuteFunctions, itemIndex: nu
 
 		let raw: unknown;
 		if (collection) {
-			const values = ctx.getNodeParameter(collection, itemIndex, {}) as IDataObject;
-			raw = values?.[uiName];
+			raw = getCollectionParameter(ctx, itemIndex, collection, uiName, uiName, undefined);
 		} else {
 			raw = ctx.getNodeParameter(uiName, itemIndex, spec.defaultValue);
 		}

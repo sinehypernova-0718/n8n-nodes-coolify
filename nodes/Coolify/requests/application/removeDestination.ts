@@ -2,6 +2,7 @@ import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
 import { encodePathSegment, requireApplicationUuid } from './parameters';
+import { locatorValue } from '../../shared/locatorValue';
 
 /**
  * Build the request that detaches a destination from an application.
@@ -20,8 +21,8 @@ export async function removeDestinationRequest(
 		'remove a destination from an application',
 	);
 
-	const destinationUuid = (
-		this.getNodeParameter('destinationUuid', itemIndex, '') as string
+	const destinationUuid = locatorValue(
+		this.getNodeParameter('destinationUuid', itemIndex, ''),
 	).trim();
 	if (!destinationUuid) {
 		throw new NodeOperationError(

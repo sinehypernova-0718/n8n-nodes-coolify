@@ -27,6 +27,19 @@ import {
 	type CoolifyRequest,
 } from './requests';
 import { coolifyApiRequest } from './shared/apiRequest';
+import { withOperationCollectionFallback } from './shared/parameterResolution';
+import {
+	searchApplications,
+	searchCloudInitScripts,
+	searchDestinations,
+	searchEnvironments,
+	getEnvironments,
+	getTagNames,
+	searchDatabases,
+	searchProjects,
+	searchServers,
+	searchTags,
+} from './searchFunctions';
 
 /**
  * Map an error of the execution to an n8n node error.
@@ -238,7 +251,7 @@ export class Coolify implements INodeType {
 		// The path is relative to this file (nodes/Coolify/).
 		icon: { light: 'file:../../icons/coolify.svg', dark: 'file:../../icons/coolify.svg' },
 		group: ['input'],
-		version: 1,
+		version: [1, 2],
 		subtitle: '={{$parameter["operation"]}}',
 		description:
 			'Manage Coolify applications, audit events, cloud init scripts, cloud tokens and databases from your n8n workflows.',
@@ -296,6 +309,19 @@ export class Coolify implements INodeType {
 			...databaseFields,
 		],
 	};
+	methods = {
+		listSearch: {
+			searchApplications,
+			searchDatabases,
+			searchProjects,
+			searchServers,
+			searchTags,
+			searchCloudInitScripts,
+			searchDestinations,
+			searchEnvironments,
+		},
+		loadOptions: { getEnvironments, getTagNames },
+	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
@@ -324,12 +350,17 @@ export class Coolify implements INodeType {
 					);
 				}
 
-				const request = await buildRequest.call(this, i);
+				const requestContext = withOperationCollectionFallback(this);
+				const request = await buildRequest.call(requestContext, i);
 
 				if (resource === 'auditEvent' && operation === 'list') {
-					const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-					const limit = this.getNodeParameter('limit', i, DEFAULT_AUDIT_EVENT_LIMIT) as number;
-					const auditEvents = await fetchAuditEvents(this, request, i, returnAll, limit);
+					const returnAll = requestContext.getNodeParameter('returnAll', i, false) as boolean;
+					const limit = requestContext.getNodeParameter(
+						'limit',
+						i,
+						DEFAULT_AUDIT_EVENT_LIMIT,
+					) as number;
+					const auditEvents = await fetchAuditEvents(requestContext, request, i, returnAll, limit);
 
 					returnData.push(
 						...this.helpers.constructExecutionMetaData(this.helpers.returnJsonArray(auditEvents), {

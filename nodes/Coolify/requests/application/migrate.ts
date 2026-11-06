@@ -2,6 +2,7 @@ import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
 import { requireApplicationUuid } from './parameters';
+import { locatorValue } from '../../shared/locatorValue';
 
 /**
  * Build the request that migrates an application to another destination.
@@ -21,8 +22,8 @@ export async function migrateApplicationRequest(
 ): Promise<CoolifyRequest> {
 	const applicationUuid = requireApplicationUuid(this, itemIndex, 'migrate an application');
 
-	const destinationUuid = (
-		this.getNodeParameter('destinationUuid', itemIndex, '') as string
+	const destinationUuid = locatorValue(
+		this.getNodeParameter('destinationUuid', itemIndex, ''),
 	).trim();
 	if (!destinationUuid) {
 		throw new NodeOperationError(

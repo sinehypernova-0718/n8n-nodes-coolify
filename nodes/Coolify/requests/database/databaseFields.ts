@@ -30,6 +30,8 @@
  */
 
 import { type IDataObject, type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
+import { locatorMode, locatorValue } from '../../shared/locatorValue';
+import { getCollectionParameter } from '../../shared/parameterResolution';
 
 /**
  * The database engines the Coolify API can create.
@@ -526,9 +528,45 @@ export function buildCreateDatabaseBody(
 	const body: IDataObject = {};
 
 	for (const spec of databaseCreateFieldSpecs(engine)) {
+		if (spec.apiName === 'environment_name' || spec.apiName === 'environment_uuid') continue;
 		const value = readDatabaseFieldValue(ctx, itemIndex, spec);
 		if (value !== undefined) {
 			body[spec.apiName] = value;
+		}
+	}
+	if (ctx.getNode().typeVersion >= 2) {
+		const environment = ctx.getNodeParameter('environment', itemIndex, {});
+		const value = locatorValue(environment).trim();
+		if (value) {
+			if (locatorMode(environment) === 'id') body.environment_uuid = value;
+			else body.environment_name = value;
+		}
+	} else {
+		const environmentMode = String(ctx.getNodeParameter('environmentMode', itemIndex, 'legacy'));
+		if (environmentMode === 'byName') {
+			const name = String(ctx.getNodeParameter('environmentName', itemIndex, '')).trim();
+			if (name) body.environment_name = name;
+		} else if (environmentMode === 'byUuid') {
+			const uuid = String(ctx.getNodeParameter('environmentUuid', itemIndex, '')).trim();
+			if (uuid) body.environment_uuid = uuid;
+		} else if (environmentMode === 'fromList') {
+			const selectedName = String(
+				ctx.getNodeParameter('environmentNameFromList', itemIndex, ''),
+			).trim();
+			const legacyName = String(ctx.getNodeParameter('environmentName', itemIndex, '')).trim();
+			const legacyUuid = String(ctx.getNodeParameter('environmentUuid', itemIndex, '')).trim();
+			if (selectedName) body.environment_name = selectedName;
+			else if (legacyName) body.environment_name = legacyName;
+			else if (legacyUuid) body.environment_uuid = legacyUuid;
+		} else {
+			const selectedName = String(
+				ctx.getNodeParameter('environmentNameFromList', itemIndex, ''),
+			).trim();
+			const name = String(ctx.getNodeParameter('environmentName', itemIndex, '')).trim();
+			const uuid = String(ctx.getNodeParameter('environmentUuid', itemIndex, '')).trim();
+			if (selectedName) body.environment_name = selectedName;
+			else if (name) body.environment_name = name;
+			else if (uuid) body.environment_uuid = uuid;
 		}
 	}
 
@@ -552,19 +590,22 @@ function readDatabaseFieldValue(
 	itemIndex: number,
 	spec: DatabaseFieldSpec,
 ): IDataObject[string] | undefined {
+	const rawValue = ctx.getNodeParameter(
+		databaseFieldUiName(spec.apiName),
+		itemIndex,
+		spec.defaultValue,
+	);
+	const value = ['project_uuid', 'server_uuid', 'destination_uuid'].includes(spec.apiName)
+		? locatorValue(rawValue)
+		: rawValue;
 	switch (spec.type) {
 		case 'boolean':
-			return ctx.getNodeParameter(databaseFieldUiName(spec.apiName), itemIndex, false) === true
-				? true
-				: undefined;
+			return value === true ? true : undefined;
 		case 'number': {
-			const value = ctx.getNodeParameter(databaseFieldUiName(spec.apiName), itemIndex, 0) as number;
-			return Number.isFinite(value) ? value : undefined;
+			return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 		}
 		case 'stringList': {
-			const raw = ctx.getNodeParameter(databaseFieldUiName(spec.apiName), itemIndex, []) as
-				| string[]
-				| string;
+			const raw = value as string[] | string;
 			const values = Array.isArray(raw) ? raw : [raw];
 			const entries = values.map((entry) => String(entry).trim()).filter((entry) => entry !== '');
 			if (entries.length === 0) {
@@ -577,10 +618,7 @@ function readDatabaseFieldValue(
 		}
 		case 'password':
 		case 'string': {
-			const value = String(
-				ctx.getNodeParameter(databaseFieldUiName(spec.apiName), itemIndex, '') as string,
-			);
-			return readTextValue(ctx, itemIndex, spec, value);
+			return readTextValue(ctx, itemIndex, spec, String(value ?? ''));
 		}
 		default:
 			return undefined;
@@ -638,19 +676,34 @@ function readPublicAccess(
 		return {};
 	}
 
-	const values = (ctx.getNodeParameter('publicAccess', itemIndex, {}) ?? {}) as IDataObject;
 	const body: IDataObject = {};
 
-	if (values.isPublic === true) {
+	if (
+		getCollectionParameter(ctx, itemIndex, 'publicAccess', 'isPublic', 'isPublic', false) === true
+	) {
 		body.is_public = true;
 	}
 
-	const publicPort = values.publicPort;
+	const publicPort = getCollectionParameter(
+		ctx,
+		itemIndex,
+		'publicAccess',
+		'publicPort',
+		'publicPort',
+		0,
+	);
 	if (typeof publicPort === 'number' && publicPort !== 0) {
 		body.public_port = publicPort;
 	}
 
-	const publicPortTimeout = values.publicPortTimeout;
+	const publicPortTimeout = getCollectionParameter(
+		ctx,
+		itemIndex,
+		'publicAccess',
+		'publicPortTimeout',
+		'publicPortTimeout',
+		0,
+	);
 	if (typeof publicPortTimeout === 'number' && publicPortTimeout > 0) {
 		body.public_port_timeout = publicPortTimeout;
 	}
@@ -674,26 +727,27 @@ function readDatabaseCollection(
 	itemIndex: number,
 	collection: string,
 ): IDataObject {
-	const values = (ctx.getNodeParameter(collection, itemIndex, {}) ?? {}) as IDataObject;
 	const body: IDataObject = {};
-
-	for (const [uiName, value] of Object.entries(values)) {
+	const specs = collection === 'resourceLimits' ? DATABASE_LIMIT_FIELDS : [];
+	for (const spec of specs) {
+		const uiName = databaseFieldUiName(spec.apiName);
+		const value = getCollectionParameter(ctx, itemIndex, collection, uiName, uiName, undefined);
 		if (value === undefined || value === null) {
 			continue;
 		}
 
 		if (typeof value === 'boolean') {
-			body[toApiName(uiName)] = value;
+			body[spec.apiName] = value;
 			continue;
 		}
 
 		if (typeof value === 'number') {
-			body[toApiName(uiName)] = value;
+			body[spec.apiName] = value;
 			continue;
 		}
 
 		if (typeof value === 'string' && value.trim() !== '') {
-			body[toApiName(uiName)] = value.trim();
+			body[spec.apiName] = value.trim();
 		}
 	}
 
@@ -706,10 +760,6 @@ function readDatabaseCollection(
  * @param uiName The name of the parameter in the editor.
  * @returns The name of the field in the Coolify API.
  */
-function toApiName(uiName: string): string {
-	return uiName.replace(/([A-Z])/g, (_match, character: string) => `_${character.toLowerCase()}`);
-}
-
 /**
  * Validate the tags of a creation request.
  */

@@ -2,6 +2,7 @@ import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import type { CoolifyRequest } from '../types';
 import { requireApplicationUuid } from './parameters';
+import { locatorValue } from '../../shared/locatorValue';
 
 /**
  * Shortest tag name the Coolify API accepts.
@@ -28,11 +29,20 @@ export async function createTagRequest(
 ): Promise<CoolifyRequest> {
 	const applicationUuid = requireApplicationUuid(this, itemIndex, 'add a tag to an application');
 
-	const tagName = (this.getNodeParameter('tagName', itemIndex, '') as string).trim();
+	let tagName = locatorValue(this.getNodeParameter('tagName', itemIndex, '')).trim();
 	const tagNames = (this.getNodeParameter('tagNames', itemIndex, []) as string[])
 		.map((name) => name.trim())
 		.filter((name) => name !== '');
 
+	const representation = String(
+		this.getNodeParameter(
+			'tagRepresentation',
+			itemIndex,
+			tagNames.length > 0 ? 'tagNames' : 'tagName',
+		),
+	);
+	if (representation === 'tagName') tagNames.length = 0;
+	else tagName = '';
 	if (tagName !== '' && tagNames.length > 0) {
 		throw new NodeOperationError(this.getNode(), 'Provide either Tag Name or Tag Names, not both', {
 			itemIndex,

@@ -22,6 +22,8 @@
  */
 
 import { type IDataObject, type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
+import { locatorMode, locatorValue } from '../../shared/locatorValue';
+import { getCollectionParameter } from '../../shared/parameterResolution';
 
 /**
  * The creation variants of the Coolify API.
@@ -1234,16 +1236,19 @@ export function buildCreateApplicationBody(
 	const body: IDataObject = {};
 
 	for (const spec of applicationFieldSpecs(variant)) {
+		if (spec.apiName === 'environment_name' || spec.apiName === 'environment_uuid') continue;
 		const uiName = applicationFieldUiName(spec.apiName);
 		const collection =
 			APPLICATION_FIELD_COLLECTIONS[spec.group as keyof typeof APPLICATION_FIELD_COLLECTIONS];
 
 		let raw: unknown;
 		if (collection) {
-			const values = ctx.getNodeParameter(collection, itemIndex, {}) as IDataObject;
-			raw = values?.[uiName];
+			raw = getCollectionParameter(ctx, itemIndex, collection, uiName, uiName, spec.defaultValue);
 		} else {
 			raw = ctx.getNodeParameter(uiName, itemIndex, spec.defaultValue);
+			if (['project_uuid', 'server_uuid', 'destination_uuid'].includes(spec.apiName)) {
+				raw = locatorValue(raw);
+			}
 		}
 
 		const value = applicationFieldValue(raw, spec);
@@ -1253,8 +1258,47 @@ export function buildCreateApplicationBody(
 
 		body[spec.apiName] = typeof value === 'string' ? encodeFieldValue(value, spec) : value;
 	}
+	if (ctx.getNode().typeVersion >= 2) {
+		const environment = ctx.getNodeParameter('environment', itemIndex, {});
+		const value = locatorValue(environment).trim();
+		if (value) {
+			if (locatorMode(environment) === 'id') body.environment_uuid = value;
+			else body.environment_name = value;
+		}
+	} else {
+		const environmentMode = thisEnvironmentMode(ctx, itemIndex);
+		if (environmentMode === 'byName') {
+			const name = String(ctx.getNodeParameter('environmentName', itemIndex, '')).trim();
+			if (name) body.environment_name = name;
+		} else if (environmentMode === 'byUuid') {
+			const uuid = String(ctx.getNodeParameter('environmentUuid', itemIndex, '')).trim();
+			if (uuid) body.environment_uuid = uuid;
+		} else if (environmentMode === 'fromList') {
+			const selectedName = String(
+				ctx.getNodeParameter('environmentNameFromList', itemIndex, ''),
+			).trim();
+			const legacyName = String(ctx.getNodeParameter('environmentName', itemIndex, '')).trim();
+			const legacyUuid = String(ctx.getNodeParameter('environmentUuid', itemIndex, '')).trim();
+			if (selectedName) body.environment_name = selectedName;
+			else if (legacyName) body.environment_name = legacyName;
+			else if (legacyUuid) body.environment_uuid = legacyUuid;
+		} else {
+			const selectedName = String(
+				ctx.getNodeParameter('environmentNameFromList', itemIndex, ''),
+			).trim();
+			const name = String(ctx.getNodeParameter('environmentName', itemIndex, '')).trim();
+			const uuid = String(ctx.getNodeParameter('environmentUuid', itemIndex, '')).trim();
+			if (selectedName) body.environment_name = selectedName;
+			else if (name) body.environment_name = name;
+			else if (uuid) body.environment_uuid = uuid;
+		}
+	}
 
 	return body;
+}
+
+function thisEnvironmentMode(ctx: IExecuteFunctions, itemIndex: number): string {
+	return String(ctx.getNodeParameter('environmentMode', itemIndex, 'legacy'));
 }
 
 /**

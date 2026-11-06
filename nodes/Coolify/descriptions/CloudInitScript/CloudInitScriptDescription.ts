@@ -1,4 +1,5 @@
 import type { INodeProperties } from 'n8n-workflow';
+import { groupOptionalParameters } from '../parameterCollections';
 
 import {
 	cloudInitScriptFieldProperty,
@@ -13,7 +14,7 @@ import {
  * exists, so the editor never offers an operation that the node cannot
  * execute.
  */
-export const cloudInitScriptFields: INodeProperties[] = [
+const cloudInitScriptProperties: INodeProperties[] = [
 	{
 		displayName: 'Operation',
 		name: 'operation',
@@ -92,9 +93,18 @@ export const cloudInitScriptFields: INodeProperties[] = [
 	{
 		displayName: 'Cloud Init Script UUID',
 		name: 'cloudInitScriptUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchCloudInitScripts', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['cloudInitScript'],
@@ -110,9 +120,18 @@ export const cloudInitScriptFields: INodeProperties[] = [
 	{
 		displayName: 'Cloud Init Script UUID',
 		name: 'cloudInitScriptUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchCloudInitScripts', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['cloudInitScript'],
@@ -134,9 +153,18 @@ export const cloudInitScriptFields: INodeProperties[] = [
 	{
 		displayName: 'Cloud Init Script UUID',
 		name: 'cloudInitScriptUuid',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'searchCloudInitScripts', searchable: true },
+			},
+			{ displayName: 'By UUID', name: 'id', type: 'string' },
+		],
 		displayOptions: {
 			show: {
 				resource: ['cloudInitScript'],
@@ -147,6 +175,11 @@ export const cloudInitScriptFields: INodeProperties[] = [
 	},
 	...cloudInitScriptOperationFields(['update'], false),
 ];
+
+export const cloudInitScriptFields = groupOptionalParameters(
+	cloudInitScriptProperties,
+	'cloudInitScript',
+);
 
 /**
  * The name and the script controls of an operation.

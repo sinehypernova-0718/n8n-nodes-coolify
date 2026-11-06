@@ -1,6 +1,7 @@
 import { type IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 
 import { encodePathSegment } from '../../shared/pathSegment';
+import { locatorValue } from '../../shared/locatorValue';
 
 /**
  * Read the UUID of the database an operation works on.
@@ -19,7 +20,7 @@ export function requireDatabaseUuid(
 	itemIndex: number,
 	purpose: string,
 ): string {
-	const databaseUuid = (ctx.getNodeParameter('databaseUuid', itemIndex, '') as string).trim();
+	const databaseUuid = locatorValue(ctx.getNodeParameter('databaseUuid', itemIndex, '')).trim();
 
 	if (!databaseUuid) {
 		throw new NodeOperationError(ctx.getNode(), `Database UUID is required to ${purpose}`, {

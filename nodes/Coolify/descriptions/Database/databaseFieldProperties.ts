@@ -44,6 +44,12 @@ export function databaseDefaultValue(spec: DatabaseFieldSpec): INodeProperties['
  * The editor control of a field.
  */
 export function databaseFieldProperty(spec: DatabaseFieldSpec): INodeProperties {
+	const resourceLocatorMethod: Record<string, string> = {
+		project_uuid: 'searchProjects',
+		server_uuid: 'searchServers',
+		destination_uuid: 'searchDestinations',
+	};
+	const listMethod = resourceLocatorMethod[spec.apiName];
 	const typeOptions: INodeProperties['typeOptions'] = {};
 
 	if (spec.type === 'password') {
@@ -53,8 +59,13 @@ export function databaseFieldProperty(spec: DatabaseFieldSpec): INodeProperties 
 		typeOptions.rows = spec.rows;
 	}
 	if (spec.type === 'stringList') {
-		typeOptions.multipleValues = true;
-		typeOptions.multipleValueButtonText = 'Add Value';
+		if (spec.apiName === 'tags') {
+			typeOptions.multipleValues = true;
+			typeOptions.loadOptionsMethod = 'getTagNames';
+		} else {
+			typeOptions.multipleValues = true;
+			typeOptions.multipleValueButtonText = 'Add Value';
+		}
 	}
 	if (spec.type === 'number') {
 		if (spec.minValue !== undefined) {
@@ -75,8 +86,20 @@ export function databaseFieldProperty(spec: DatabaseFieldSpec): INodeProperties 
 	return {
 		displayName: spec.displayName,
 		name: databaseFieldUiName(spec.apiName),
-		type,
-		default: databaseDefaultValue(spec),
+		type: listMethod ? 'resourceLocator' : spec.apiName === 'tags' ? 'options' : type,
+		default: listMethod ? { mode: 'list', value: '' } : databaseDefaultValue(spec),
+		modes: listMethod
+			? ([
+					{
+						displayName: 'From List',
+						name: 'list',
+						type: 'list',
+						default: '',
+						typeOptions: { searchListMethod: listMethod, searchable: true },
+					},
+					{ displayName: 'By UUID', name: 'id', type: 'string', default: '' },
+				] as unknown as INodeProperties['modes'])
+			: undefined,
 		description: spec.description,
 		typeOptions: Object.keys(typeOptions).length > 0 ? typeOptions : undefined,
 		options: spec.type === 'booleanSetting' ? DATABASE_UPDATE_BOOLEAN_OPTIONS : undefined,
