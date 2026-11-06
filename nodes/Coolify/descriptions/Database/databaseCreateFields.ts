@@ -125,7 +125,10 @@ function environmentSelectorFields(operations: string[]): INodeProperties[] {
 			type: 'options',
 			default: '',
 			required: true,
-			typeOptions: { loadOptionsMethod: 'getEnvironments' },
+			typeOptions: {
+				loadOptionsMethod: 'getEnvironments',
+				loadOptionsDependsOn: ['projectUuid.value'],
+			},
 			description:
 				'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 			displayOptions: { show: { ...common, environmentMode: ['fromList'], '@version': [1] } },
@@ -155,6 +158,7 @@ function environmentSelectorFields(operations: string[]): INodeProperties[] {
 			type: 'resourceLocator',
 			default: { mode: 'list', value: '' },
 			required: true,
+			typeOptions: { loadOptionsDependsOn: ['projectUuid.value'] },
 			modes: [
 				{
 					displayName: 'From List',

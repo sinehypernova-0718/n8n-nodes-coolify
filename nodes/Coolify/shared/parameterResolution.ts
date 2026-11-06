@@ -5,7 +5,24 @@ export function operationOptionsParameterName(resource: string, operation: strin
 	return `${resource}${operation.charAt(0).toUpperCase()}${operation.slice(1)}Options`;
 }
 
-/** Prefer an explicitly present collection field, preserving all falsy values, then read its legacy root field. */
+/**
+ * Read a field that moved from the node root into an operation collection.
+ *
+ * Version 1 stored the value in the flat root parameter named `legacyName`, so
+ * it is read from there. Version 2 stores it in `collectionName`: a field that
+ * is explicitly present is returned unchanged, preserving every falsy value,
+ * and an absent field resolves to `defaultValue`. The legacy root value is
+ * never used as a fallback in version 2, so a stale value cannot be
+ * resurrected.
+ *
+ * @param ctx The execution context of the node.
+ * @param itemIndex Index of the input item the request belongs to.
+ * @param collectionName Name of the operation collection of version 2.
+ * @param fieldName Name of the field inside the collection.
+ * @param legacyName Name of the flat root parameter of version 1.
+ * @param defaultValue Value to use when a version 2 field is absent.
+ * @returns The value of the field.
+ */
 export function getCollectionParameter(
 	ctx: IExecuteFunctions,
 	itemIndex: number,

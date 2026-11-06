@@ -133,7 +133,10 @@ function environmentSelectorFields(resource: string, operations: string[]): INod
 			type: 'options',
 			default: '',
 			required: true,
-			typeOptions: { loadOptionsMethod: 'getEnvironments' },
+			typeOptions: {
+				loadOptionsMethod: 'getEnvironments',
+				loadOptionsDependsOn: ['projectUuid.value'],
+			},
 			description:
 				'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 			displayOptions: {
@@ -169,6 +172,7 @@ function environmentSelectorFields(resource: string, operations: string[]): INod
 			type: 'resourceLocator',
 			default: { mode: 'list', value: '' },
 			required: true,
+			typeOptions: { loadOptionsDependsOn: ['projectUuid.value'] },
 			modes: [
 				{
 					displayName: 'From List',

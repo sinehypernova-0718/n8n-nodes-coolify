@@ -65,8 +65,11 @@ function asNodeError(
 	if (error instanceof NodeApiError || error instanceof NodeOperationError) {
 		return error;
 	}
+	if (error instanceof Error) {
+		return new NodeOperationError(node, error, { itemIndex });
+	}
 
-	return new NodeOperationError(node, error as Error, { itemIndex });
+	return new NodeOperationError(node, String(error), { itemIndex });
 }
 
 /**
@@ -102,6 +105,18 @@ const AUDIT_EVENT_PAGE_SIZE = 100;
 /** Default number of audit events returned when Return All is disabled. */
 const DEFAULT_AUDIT_EVENT_LIMIT = 50;
 
+/**
+ * Safety ceiling on the number of audit event pages a single read may fetch.
+ *
+ * The endpoint paginates at {@link AUDIT_EVENT_PAGE_SIZE} events per page, so
+ * the bound caps a Return All read at 100,000 events. The cap is needed because
+ * the paginator is offset based: a malformed or hostile response can report a
+ * `last_page` that keeps growing while events are inserted, and Return All
+ * accumulates every event in memory. Exceeding the cap fails the request with
+ * an actionable error; it never truncates the result silently.
+ */
+const MAX_AUDIT_EVENT_PAGES = 1_000;
+
 /** Type guard for object entries returned by Coolify. */
 function isDataObject(value: unknown): value is IDataObject {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -125,18 +140,8 @@ async function fetchAuditEvents(
 	let lastPage: number | undefined;
 	let total: number | undefined;
 	const seenIds = new Set<number>();
-	const MAX_AUDIT_EVENT_PAGES = 100_000;
 
 	while (lastPage === undefined || page <= lastPage) {
-		if (page > MAX_AUDIT_EVENT_PAGES) {
-			throw new NodeOperationError(
-				ctx.getNode(),
-				'Coolify audit event pagination exceeded the safety limit',
-				{
-					itemIndex,
-				},
-			);
-		}
 		const response = await coolifyApiRequest(ctx, request.method, request.path, {
 			qs: { ...request.qs, page, per_page: perPage },
 			body: request.body,
@@ -195,6 +200,13 @@ async function fetchAuditEvents(
 				{
 					itemIndex,
 				},
+			);
+		}
+		if (responseLastPage > MAX_AUDIT_EVENT_PAGES) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				`Coolify reports ${responseLastPage} audit event pages, more than the ${MAX_AUDIT_EVENT_PAGES}-page safety limit. Narrow the search or action filter and try again.`,
+				{ itemIndex },
 			);
 		}
 
@@ -393,9 +405,7 @@ export class Coolify implements INodeType {
 					retrySafety: request.retrySafety,
 				});
 
-				const responseData = (Array.isArray(response) ? response : [response]).filter(
-					(entry): entry is IDataObject => typeof entry === 'object' && entry !== null,
-				);
+				const responseData = (Array.isArray(response) ? response : [response]).filter(isDataObject);
 
 				returnData.push(
 					...this.helpers.constructExecutionMetaData(this.helpers.returnJsonArray(responseData), {
@@ -406,7 +416,9 @@ export class Coolify implements INodeType {
 				if (this.continueOnFail()) {
 					returnData.push(
 						...this.helpers.constructExecutionMetaData(
-							this.helpers.returnJsonArray({ error: (error as Error).message }),
+							this.helpers.returnJsonArray({
+								error: error instanceof Error ? error.message : String(error),
+							}),
 							{ itemData: { item: i } },
 						),
 					);

@@ -760,12 +760,6 @@ function readDatabaseCollection(
 }
 
 /**
- * Turn the name of an editor parameter into the name of the API field.
- *
- * @param uiName The name of the parameter in the editor.
- * @returns The name of the field in the Coolify API.
- */
-/**
  * Validate the tags of a creation request.
  */
 function validateTags(ctx: IExecuteFunctions, itemIndex: number, tags: string[]): void {

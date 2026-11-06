@@ -223,11 +223,11 @@ Every operation is sent through the shared transport, so the rate limit and retr
 
 #### Reading audit events
 
-| Operation | Description                                                                              |
-| --------- | ---------------------------------------------------------------------------------------- |
-| `List`    | List one page of the audit events of the team, newest first, with pagination and filters |
+| Operation | Description                                                                                     |
+| --------- | ----------------------------------------------------------------------------------------------- |
+| `List`    | List the audit events of the team, newest first, with automatic pagination and optional filters |
 
-> **Note:** the response is one page in the pagination format of Coolify, not a flat list. Only team admins and owners can view audit events, a token without that access is expected to receive HTTP 403. Actor e-mail, token, metadata, changes, IP address and user agent are returned only for tokens with the `read:sensitive` or the `root` ability.
+> **Note:** `Return All` follows the Coolify paginator and returns every matching event as an individual item, up to a safety limit of 100,000 events; `Limit` returns at most the requested number. Each page is validated before it is appended, and malformed or inconsistent pagination metadata fails the request instead of returning a partial result. Only team admins and owners can view audit events, a token without that access is expected to receive HTTP 403. Actor e-mail, token, metadata, changes, IP address and user agent are returned only for tokens with the `read:sensitive` or the `root` ability.
 
 ### Cloud Init Script
 
