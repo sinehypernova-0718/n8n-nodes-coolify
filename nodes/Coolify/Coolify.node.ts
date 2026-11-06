@@ -109,11 +109,13 @@ const DEFAULT_AUDIT_EVENT_LIMIT = 50;
  * Safety ceiling on the number of audit event pages a single read may fetch.
  *
  * The endpoint paginates at {@link AUDIT_EVENT_PAGE_SIZE} events per page, so
- * the bound caps a Return All read at 100,000 events. The cap is needed because
- * the paginator is offset based: a malformed or hostile response can report a
- * `last_page` that keeps growing while events are inserted, and Return All
- * accumulates every event in memory. Exceeding the cap fails the request with
- * an actionable error; it never truncates the result silently.
+ * the bound caps a Return All read at 100,000 events. A limited read is bounded
+ * by the pages its own limit requires, so a large upstream `last_page` does not
+ * block a small limit. The cap is needed because the paginator is offset based:
+ * a malformed or hostile response can report a `last_page` that keeps growing
+ * while events are inserted, and Return All accumulates every event in memory.
+ * Exceeding the cap fails the request with an actionable error; it never
+ * truncates the result silently.
  */
 const MAX_AUDIT_EVENT_PAGES = 1_000;
 
@@ -135,6 +137,16 @@ async function fetchAuditEvents(
 	}
 
 	const perPage = returnAll ? AUDIT_EVENT_PAGE_SIZE : Math.min(limit, AUDIT_EVENT_PAGE_SIZE);
+	if (!returnAll) {
+		const intendedPages = Math.ceil(limit / perPage);
+		if (intendedPages > MAX_AUDIT_EVENT_PAGES) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				`The requested limit needs ${intendedPages} audit event pages, more than the ${MAX_AUDIT_EVENT_PAGES}-page safety limit. Lower the limit or narrow the search and action filters.`,
+				{ itemIndex },
+			);
+		}
+	}
 	const auditEvents: IDataObject[] = [];
 	let page = 1;
 	let lastPage: number | undefined;
@@ -202,7 +214,7 @@ async function fetchAuditEvents(
 				},
 			);
 		}
-		if (responseLastPage > MAX_AUDIT_EVENT_PAGES) {
+		if (returnAll && responseLastPage > MAX_AUDIT_EVENT_PAGES) {
 			throw new NodeOperationError(
 				ctx.getNode(),
 				`Coolify reports ${responseLastPage} audit event pages, more than the ${MAX_AUDIT_EVENT_PAGES}-page safety limit. Narrow the search or action filter and try again.`,
