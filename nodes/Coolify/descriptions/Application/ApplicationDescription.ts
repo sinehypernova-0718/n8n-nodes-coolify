@@ -6,6 +6,18 @@ import { storageBackupScheduleDescription } from './storageBackupScheduleFields'
 import { groupOptionalParameters } from '../parameterCollections';
 
 /**
+ * Dependencies of the destination resource locator.
+ *
+ * A destination belongs to the server selected for the operation. The server is
+ * a root-level resource locator for `addDestination`, `removeDestination`,
+ * `clone` and `migrate`, so the destination list reloads when `serverUuid`
+ * changes. The path must name the root parameter; a collection path such as
+ * `applicationCloneOptions.serverUuid.value` does not exist and leaves the list
+ * stale.
+ */
+const destinationServerDependencies = ['serverUuid.value'];
+
+/**
  * Description of the Coolify application resource.
  *
  * The operation selector lists the application operations this node supports.
@@ -93,7 +105,8 @@ const applicationProperties: INodeProperties[] = [
 			{
 				name: 'Delete',
 				value: 'delete',
-				description: 'Delete an application by UUID. The options below control whether its configuration and volumes are removed.',
+				description:
+					'Delete an application by UUID. The options below control whether its configuration and volumes are removed.',
 				action: 'Delete an application',
 			},
 			{
@@ -233,13 +246,15 @@ const applicationProperties: INodeProperties[] = [
 			{
 				name: 'Run Storage Backup',
 				value: 'runStorageBackup',
-				description: 'Queue an immediate backup of a storage. The storage must have a backup schedule.',
+				description:
+					'Queue an immediate backup of a storage. The storage must have a backup schedule.',
 				action: 'Run a storage backup',
 			},
 			{
 				name: 'Set Storage Backup Schedule',
 				value: 'setStorageBackupSchedule',
-				description: 'Create or replace the backup schedule of a storage. All values in this form are sent; editing replaces the schedule, including the timeout and backup notification days shown here.',
+				description:
+					'Create or replace the backup schedule of a storage. All values in this form are sent; editing replaces the schedule, including the timeout and backup notification days shown here.',
 				action: 'Set a backup schedule',
 			},
 			{
@@ -276,7 +291,8 @@ const applicationProperties: INodeProperties[] = [
 			{
 				name: 'Update Preview Domains',
 				value: 'updatePreviewDomains',
-				description: 'Replace the domains of a preview deployment. Existing domains are not kept; choose the mode that matches the application type.',
+				description:
+					'Replace the domains of a preview deployment. Existing domains are not kept; choose the mode that matches the application type.',
 				action: 'Update preview domains',
 			},
 			{
@@ -968,7 +984,8 @@ const applicationProperties: INodeProperties[] = [
 				operation: ['updateEnv'],
 			},
 		},
-		description: 'Whether the environment variable is used in preview deployments. Coolify resets this flag if omitted from an update request.',
+		description:
+			'Whether the environment variable is used in preview deployments. Coolify resets this flag if omitted from an update request.',
 	},
 	{
 		displayName: 'Is Literal',
@@ -981,7 +998,8 @@ const applicationProperties: INodeProperties[] = [
 				operation: ['updateEnv'],
 			},
 		},
-		description: 'Whether the environment variable is a literal that is not expanded. Coolify resets this flag if omitted from an update request.',
+		description:
+			'Whether the environment variable is a literal that is not expanded. Coolify resets this flag if omitted from an update request.',
 	},
 	{
 		displayName: 'Is Multiline',
@@ -994,7 +1012,8 @@ const applicationProperties: INodeProperties[] = [
 				operation: ['updateEnv'],
 			},
 		},
-		description: 'Whether the environment variable spans multiple lines. Coolify resets this flag if omitted from an update request.',
+		description:
+			'Whether the environment variable spans multiple lines. Coolify resets this flag if omitted from an update request.',
 	},
 	{
 		displayName: 'Is Shown Once',
@@ -1007,7 +1026,8 @@ const applicationProperties: INodeProperties[] = [
 				operation: ['updateEnv'],
 			},
 		},
-		description: 'Whether the saved value is hidden in the Coolify UI and API responses. Coolify resets this flag if omitted from an update request.',
+		description:
+			'Whether the saved value is hidden in the Coolify UI and API responses. Coolify resets this flag if omitted from an update request.',
 	},
 
 	// ----------------------------------
@@ -1194,28 +1214,32 @@ const applicationProperties: INodeProperties[] = [
 				name: 'isLiteral',
 				type: 'boolean',
 				default: false,
-				description: 'Whether the environment variable is a literal that is not expanded. Coolify resets this flag if omitted from an update request.',
+				description:
+					'Whether the environment variable is a literal that is not expanded. Coolify resets this flag if omitted from an update request.',
 			},
 			{
 				displayName: 'Is Multiline',
 				name: 'isMultiline',
 				type: 'boolean',
 				default: false,
-				description: 'Whether the environment variable spans multiple lines. Coolify resets this flag if omitted from an update request.',
+				description:
+					'Whether the environment variable spans multiple lines. Coolify resets this flag if omitted from an update request.',
 			},
 			{
 				displayName: 'Is Preview',
 				name: 'isPreview',
 				type: 'boolean',
 				default: false,
-				description: 'Whether the environment variable is used in preview deployments. Coolify resets this flag if omitted from an update request.',
+				description:
+					'Whether the environment variable is used in preview deployments. Coolify resets this flag if omitted from an update request.',
 			},
 			{
 				displayName: 'Is Shown Once',
 				name: 'isShownOnce',
 				type: 'boolean',
 				default: false,
-				description: 'Whether the saved value is hidden in the Coolify UI and API responses. Coolify resets this flag if omitted from an update request.',
+				description:
+					'Whether the saved value is hidden in the Coolify UI and API responses. Coolify resets this flag if omitted from an update request.',
 			},
 			{
 				displayName: 'Key',
@@ -1560,6 +1584,7 @@ const applicationProperties: INodeProperties[] = [
 		type: 'resourceLocator',
 		default: { mode: 'list', value: '' },
 		required: true,
+		typeOptions: { loadOptionsDependsOn: destinationServerDependencies },
 		modes: [
 			{
 				displayName: 'From List',
@@ -1611,6 +1636,7 @@ const applicationProperties: INodeProperties[] = [
 		type: 'resourceLocator',
 		default: { mode: 'list', value: '' },
 		required: true,
+		typeOptions: { loadOptionsDependsOn: destinationServerDependencies },
 		modes: [
 			{
 				displayName: 'From List',
@@ -2352,6 +2378,7 @@ const applicationProperties: INodeProperties[] = [
 		type: 'resourceLocator',
 		default: { mode: 'list', value: '' },
 		required: true,
+		typeOptions: { loadOptionsDependsOn: destinationServerDependencies },
 		modes: [
 			{
 				displayName: 'From List',
@@ -2430,6 +2457,7 @@ const applicationProperties: INodeProperties[] = [
 		type: 'resourceLocator',
 		default: { mode: 'list', value: '' },
 		required: true,
+		typeOptions: { loadOptionsDependsOn: destinationServerDependencies },
 		modes: [
 			{
 				displayName: 'From List',

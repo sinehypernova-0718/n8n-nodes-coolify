@@ -6,6 +6,7 @@ import {
 	type IExecuteFunctions,
 	type INode,
 	type INodeExecutionData,
+	type INodeProperties,
 	type INodeType,
 	type INodeTypeDescription,
 } from 'n8n-workflow';
@@ -123,8 +124,19 @@ async function fetchAuditEvents(
 	let page = 1;
 	let lastPage: number | undefined;
 	let total: number | undefined;
+	const seenIds = new Set<number>();
+	const MAX_AUDIT_EVENT_PAGES = 100_000;
 
 	while (lastPage === undefined || page <= lastPage) {
+		if (page > MAX_AUDIT_EVENT_PAGES) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'Coolify audit event pagination exceeded the safety limit',
+				{
+					itemIndex,
+				},
+			);
+		}
 		const response = await coolifyApiRequest(ctx, request.method, request.path, {
 			qs: { ...request.qs, page, per_page: perPage },
 			body: request.body,
@@ -186,15 +198,8 @@ async function fetchAuditEvents(
 			);
 		}
 
-		if (lastPage !== undefined && (responseLastPage !== lastPage || responseTotal !== total)) {
-			throw new NodeOperationError(
-				ctx.getNode(),
-				'Coolify audit event pagination metadata changed during retrieval',
-				{
-					itemIndex,
-				},
-			);
-		}
+		// Audit events can be inserted while the offset-based result is read. Each
+		// page must be internally consistent, but later pages may report new totals.
 		lastPage = responseLastPage;
 		total = responseTotal;
 
@@ -204,24 +209,28 @@ async function fetchAuditEvents(
 				itemIndex,
 			});
 		}
-		const expectedPageEvents = Math.min(perPage, Math.max(0, responseTotal - (page - 1) * perPage));
-		if (events.length === 0 && expectedPageEvents > 0) {
+		if (events.length === 0 && page < lastPage) {
 			throw new NodeOperationError(
 				ctx.getNode(),
 				'Coolify returned an empty audit event page before the reported last page',
 				{ itemIndex },
 			);
 		}
-		if (events.length !== expectedPageEvents) {
-			throw new NodeOperationError(
-				ctx.getNode(),
-				'Coolify returned an incomplete audit event page for the reported total',
-				{ itemIndex },
-			);
+		for (const event of events) {
+			const id = event.id;
+			if (typeof id !== 'number' || !Number.isSafeInteger(id)) {
+				throw new NodeOperationError(
+					ctx.getNode(),
+					'Coolify returned an audit event without a valid id',
+					{
+						itemIndex,
+					},
+				);
+			}
+			if (seenIds.has(id)) continue;
+			seenIds.add(id);
+			if (returnAll || auditEvents.length < limit) auditEvents.push(event);
 		}
-
-		const remaining = returnAll ? events.length : limit - auditEvents.length;
-		auditEvents.push(...events.slice(0, remaining));
 		if (events.length === 0 || (!returnAll && auditEvents.length >= limit) || page >= lastPage) {
 			break;
 		}
@@ -229,7 +238,7 @@ async function fetchAuditEvents(
 		page += 1;
 	}
 
-	if (returnAll && auditEvents.length !== total) {
+	if (returnAll && auditEvents.length < (total ?? 0)) {
 		throw new NodeOperationError(
 			ctx.getNode(),
 			'Coolify returned fewer audit events than its paginator reported',
@@ -241,6 +250,54 @@ async function fetchAuditEvents(
 
 	return auditEvents;
 }
+
+/**
+ * The properties of the node.
+ *
+ * Assembled once so the execution path can tell the fields of an operation
+ * collection from the root parameters without rebuilding the description.
+ */
+const nodeProperties: INodeProperties[] = [
+	{
+		displayName: 'Resource',
+		name: 'resource',
+		type: 'options',
+		noDataExpression: true,
+		options: [
+			{
+				name: 'Application',
+				value: 'application',
+				description: 'Manage the applications of a Coolify team',
+			},
+			{
+				name: 'Audit Event',
+				value: 'auditEvent',
+				description: 'List the audit events of a Coolify team',
+			},
+			{
+				name: 'Cloud Init Script',
+				value: 'cloudInitScript',
+				description: 'Manage the reusable cloud init scripts of a Coolify team',
+			},
+			{
+				name: 'Cloud Token',
+				value: 'cloudToken',
+				description: 'Manage the cloud provider tokens of a Coolify team',
+			},
+			{
+				name: 'Database',
+				value: 'database',
+				description: 'Manage the databases of a Coolify team',
+			},
+		],
+		default: 'application',
+	},
+	...applicationFields,
+	...auditEventFields,
+	...cloudInitScriptFields,
+	...cloudTokenFields,
+	...databaseFields,
+];
 
 export class Coolify implements INodeType {
 	description: INodeTypeDescription = {
@@ -267,47 +324,7 @@ export class Coolify implements INodeType {
 				required: true,
 			},
 		],
-		properties: [
-			{
-				displayName: 'Resource',
-				name: 'resource',
-				type: 'options',
-				noDataExpression: true,
-				options: [
-					{
-						name: 'Application',
-						value: 'application',
-						description: 'Manage the applications of a Coolify team',
-					},
-					{
-						name: 'Audit Event',
-						value: 'auditEvent',
-						description: 'List the audit events of a Coolify team',
-					},
-					{
-						name: 'Cloud Init Script',
-						value: 'cloudInitScript',
-						description: 'Manage the reusable cloud init scripts of a Coolify team',
-					},
-					{
-						name: 'Cloud Token',
-						value: 'cloudToken',
-						description: 'Manage the cloud provider tokens of a Coolify team',
-					},
-					{
-						name: 'Database',
-						value: 'database',
-						description: 'Manage the databases of a Coolify team',
-					},
-				],
-				default: 'application',
-			},
-			...applicationFields,
-			...auditEventFields,
-			...cloudInitScriptFields,
-			...cloudTokenFields,
-			...databaseFields,
-		],
+		properties: nodeProperties,
 	};
 	methods = {
 		listSearch: {
@@ -350,7 +367,7 @@ export class Coolify implements INodeType {
 					);
 				}
 
-				const requestContext = withOperationCollectionFallback(this);
+				const requestContext = withOperationCollectionFallback(this, nodeProperties);
 				const request = await buildRequest.call(requestContext, i);
 
 				if (resource === 'auditEvent' && operation === 'list') {

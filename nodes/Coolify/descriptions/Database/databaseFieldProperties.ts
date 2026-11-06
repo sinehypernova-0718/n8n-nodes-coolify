@@ -101,7 +101,12 @@ export function databaseFieldProperty(spec: DatabaseFieldSpec): INodeProperties 
 				] as unknown as INodeProperties['modes'])
 			: undefined,
 		description: spec.description,
-		typeOptions: Object.keys(typeOptions).length > 0 ? typeOptions : undefined,
+		typeOptions:
+			listMethod === 'searchDestinations'
+				? { ...typeOptions, loadOptionsDependsOn: ['serverUuid.value'] }
+				: Object.keys(typeOptions).length > 0
+					? typeOptions
+					: undefined,
 		options: spec.type === 'booleanSetting' ? DATABASE_UPDATE_BOOLEAN_OPTIONS : undefined,
 	};
 }

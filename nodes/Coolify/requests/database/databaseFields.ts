@@ -598,6 +598,11 @@ function readDatabaseFieldValue(
 	const value = ['project_uuid', 'server_uuid', 'destination_uuid'].includes(spec.apiName)
 		? locatorValue(rawValue)
 		: rawValue;
+	// An optional field the user did not set resolves to `undefined`; it must stay
+	// out of the request instead of becoming the string "undefined".
+	if (value === undefined || value === null) {
+		return undefined;
+	}
 	switch (spec.type) {
 		case 'boolean':
 			return value === true ? true : undefined;

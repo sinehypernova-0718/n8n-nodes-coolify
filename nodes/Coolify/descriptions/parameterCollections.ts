@@ -42,11 +42,22 @@ function rootRelativeDisplayOptions(
 ): INodeProperties['displayOptions'] {
 	if (!displayOptions) return undefined;
 
-	return {
-		...displayOptions,
-		show: rootRelativeConditions(displayOptions.show, siblingNames),
-		hide: rootRelativeConditions(displayOptions.hide, siblingNames),
-	};
+	// Only carry the conditions the field actually declares. Writing an explicit
+	// `show: undefined` / `hide: undefined` makes `getParameterDependencies` in
+	// `n8n-workflow` call `Object.keys()` on `undefined` while it builds the
+	// parameter resolve order, which throws when a collection is processed.
+	const rewritten: IDisplayOptions = { ...displayOptions };
+	if (displayOptions.show) {
+		rewritten.show = rootRelativeConditions(displayOptions.show, siblingNames);
+	} else {
+		delete rewritten.show;
+	}
+	if (displayOptions.hide) {
+		rewritten.hide = rootRelativeConditions(displayOptions.hide, siblingNames);
+	} else {
+		delete rewritten.hide;
+	}
+	return rewritten;
 }
 
 const COLLECTION_LABELS: Record<string, string> = {
@@ -83,6 +94,16 @@ const COLLECTION_LABELS: Record<string, string> = {
 	createSqlite: 'Database Options',
 };
 
+function isNodeProperty(value: unknown): value is INodeProperties {
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		'displayName' in value &&
+		'type' in value &&
+		'default' in value
+	);
+}
+
 /** Group optional operation fields while retaining the resource field definitions as the source of truth. */
 export function groupOptionalParameters(
 	properties: INodeProperties[],
@@ -92,6 +113,76 @@ export function groupOptionalParameters(
 	const retained: INodeProperties[] = [];
 	for (const property of properties) {
 		const show = property.displayOptions?.show;
+		if (
+			property.type === 'collection' &&
+			show &&
+			Array.isArray(show.resource) &&
+			show.resource.includes(resource) &&
+			Array.isArray(property.options)
+		) {
+			if (property.typeOptions?.multipleValues) {
+				retained.push({
+					...property,
+					displayOptions: { ...property.displayOptions, show: { ...show, '@version': [1] } },
+				});
+				property.displayOptions = {
+					...property.displayOptions,
+					show: { ...show, '@version': [2] },
+				};
+				retained.push(property);
+				continue;
+			}
+			for (const option of property.options) {
+				if (!isNodeProperty(option)) continue;
+				if (
+					properties.some(
+						(existing) =>
+							existing.name === option.name &&
+							Array.isArray(existing.displayOptions?.show?.operation) &&
+							existing.displayOptions.show.operation.includes('legacy'),
+					)
+				) {
+					continue;
+				}
+				retained.push({
+					...option,
+					displayOptions: {
+						...option.displayOptions,
+						show: {
+							...show,
+							...option.displayOptions?.show,
+							'@version': [1],
+						},
+					},
+				});
+			}
+			property.displayOptions = {
+				...property.displayOptions,
+				show: { ...show, '@version': [2] },
+			};
+			retained.push(property);
+			continue;
+		}
+		if (property.type === 'resourceLocator' && show) {
+			const explicitlyVersioned = Array.isArray(show['@version']);
+			if (!explicitlyVersioned) {
+				const legacyProperty: INodeProperties = {
+					...property,
+					type: 'string',
+					default: '',
+					modes: undefined,
+					typeOptions: undefined,
+					displayOptions: { ...property.displayOptions, show: { ...show, '@version': [1] } },
+				};
+				retained.push(legacyProperty);
+			}
+			property.displayOptions = {
+				...property.displayOptions,
+				show: { ...show, '@version': [2] },
+			};
+			retained.push(property);
+			continue;
+		}
 		const operations = show?.operation;
 		if (
 			property.required === true ||
@@ -103,6 +194,27 @@ export function groupOptionalParameters(
 		) {
 			retained.push(property);
 			continue;
+		}
+		if (resource === 'auditEvent') {
+			retained.push({
+				...property,
+				displayOptions: { ...property.displayOptions, show: { ...show, '@version': [1] } },
+			});
+			property.displayOptions = {
+				...property.displayOptions,
+				show: { ...show, '@version': [2] },
+			};
+			retained.push(property);
+			continue;
+		}
+		const legacyProperty = { ...property };
+		if (show && Array.isArray(operations)) {
+			const legacyOperations = operations.includes('legacy') ? ['delete'] : operations;
+			legacyProperty.displayOptions = {
+				...property.displayOptions,
+				show: { ...show, operation: legacyOperations, '@version': [1] },
+			};
+			retained.push(legacyProperty);
 		}
 		for (const operation of operations) {
 			if (typeof operation !== 'string' || operation === 'legacy') continue;
@@ -125,7 +237,9 @@ export function groupOptionalParameters(
 			type: 'collection',
 			default: {},
 			description: 'Optional settings for this operation',
-			displayOptions: { show: { resource: [resource], operation: [operation] } },
+			displayOptions: {
+				show: { resource: [resource], operation: [operation], '@version': [2] },
+			},
 			options: options.sort((left, right) => left.displayName.localeCompare(right.displayName)),
 		});
 	}

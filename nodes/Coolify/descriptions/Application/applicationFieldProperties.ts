@@ -101,7 +101,12 @@ export function fieldProperty(spec: ApplicationFieldSpec): INodeProperties {
 				] as unknown as INodeProperties['modes'])
 			: undefined,
 		description: spec.description,
-		typeOptions: Object.keys(typeOptions).length > 0 ? typeOptions : undefined,
+		typeOptions:
+			listMethod === 'searchDestinations'
+				? { ...typeOptions, loadOptionsDependsOn: ['serverUuid.value'] }
+				: Object.keys(typeOptions).length > 0
+					? typeOptions
+					: undefined,
 		options: spec.type === 'options' ? spec.options : undefined,
 	};
 }

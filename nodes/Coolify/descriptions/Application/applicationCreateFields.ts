@@ -176,6 +176,7 @@ function environmentSelectorFields(resource: string, operations: string[]): INod
 					type: 'list',
 					typeOptions: { searchListMethod: 'searchEnvironments', searchable: true },
 				},
+				{ displayName: 'By Name', name: 'name', type: 'string' },
 				{ displayName: 'By UUID', name: 'id', type: 'string' },
 			],
 			description:
