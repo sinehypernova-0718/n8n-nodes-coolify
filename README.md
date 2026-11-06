@@ -463,6 +463,10 @@ Releases are published by GitHub Actions, never from a local machine, so that ev
 
 ## 📝 Version history
 
+### v0.1.4
+
+Adds resource locators for selecting Coolify entities in the node editor and automatically paginates Audit Event results, returning each event as an individual item. The release also improves parameter handling for n8n v2 and groups the audit event list filters.
+
 ### v0.1.3
 
 Adds the Database resource, introducing 17 operations for managing standalone Coolify databases:
