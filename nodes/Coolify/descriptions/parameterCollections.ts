@@ -195,18 +195,6 @@ export function groupOptionalParameters(
 			retained.push(property);
 			continue;
 		}
-		if (resource === 'auditEvent') {
-			retained.push({
-				...property,
-				displayOptions: { ...property.displayOptions, show: { ...show, '@version': [1] } },
-			});
-			property.displayOptions = {
-				...property.displayOptions,
-				show: { ...show, '@version': [2] },
-			};
-			retained.push(property);
-			continue;
-		}
 		const legacyProperty = { ...property };
 		if (show && Array.isArray(operations)) {
 			const legacyOperations = operations.includes('legacy') ? ['delete'] : operations;

@@ -97,7 +97,7 @@ export function withOperationCollectionFallback(
 						return getNodeParameter(name, itemIndex, defaultValue);
 					}
 					const resource = getNodeParameter('resource', itemIndex, '') as string;
-					if (!['application', 'database', 'cloudInitScript'].includes(resource)) {
+					if (!['application', 'database', 'cloudInitScript', 'auditEvent'].includes(resource)) {
 						return getNodeParameter(name, itemIndex, defaultValue);
 					}
 					const operation = getNodeParameter('operation', itemIndex, '') as string;
