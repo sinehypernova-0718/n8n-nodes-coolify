@@ -90,7 +90,20 @@ const deploymentProperties: INodeProperties[] = [
 				displayName: 'From List',
 				name: 'list',
 				type: 'list',
-				typeOptions: { searchListMethod: 'searchDeployableResources', searchable: true },
+				typeOptions: {
+					searchListMethod: 'searchDeployableResources',
+					searchable: true,
+					// The databases of a service have no list of their own, so the
+					// lookup reads them once per service. Requiring a filter keeps
+					// that fan-out off the empty list, and n8n debounces the filter
+					// and caches the result of each query.
+					searchFilterRequired: true,
+					slowLoadNotice: {
+						message:
+							'Selecting from the list can take a moment on a large team. Enter the UUID with "By UUID" if it is slow.',
+						timeout: 10_000,
+					},
+				},
 			},
 			{ displayName: 'By UUID', name: 'id', type: 'string' },
 		],
@@ -101,7 +114,7 @@ const deploymentProperties: INodeProperties[] = [
 			},
 		},
 		description:
-			'UUID of an application, a service or a database to deploy. Provide this or a tag, not both. Separate several UUIDs with a comma.',
+			'UUID of an application, a service or a database to deploy, including a database of a service. Provide this or a tag, not both. Separate several UUIDs with a comma.',
 	},
 	{
 		displayName: 'Tag',

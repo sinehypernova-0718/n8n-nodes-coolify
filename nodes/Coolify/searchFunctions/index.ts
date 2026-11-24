@@ -98,10 +98,17 @@ export async function searchCloudInitScripts(
  * List the resources a deployment can target, for a resource locator.
  *
  * The deploy endpoint of the Coolify API accepts the UUID of an application,
- * a service or a database, so the options are read from the three list
- * endpoints at once. The API publishes no kind alongside the UUID, so every
- * option is labelled with the kind of the resource, which keeps the three
- * namespaces apart when two resources share a name.
+ * a service, a standalone database or a database of a service. The API
+ * publishes no single list of them: the applications, the services and the
+ * standalone databases each have their own endpoint, while the databases of a
+ * service are reachable only through `GET /services/{uuid}/databases`, one
+ * call per service. The lookup therefore fans out over the services, and the
+ * list mode of the field requires a search filter: n8n debounces the filter
+ * and caches each query's result, so the fan-out runs once per distinct query
+ * instead of once per keystroke. An empty filter returns the three flat lists
+ * without the fan-out. The API publishes no kind alongside a UUID, so every
+ * option is labelled with the kind of the resource, which keeps the namespaces
+ * apart when two resources share a name.
  *
  * @param this The load options context of the node.
  * @param filter Text to narrow the options by.
@@ -124,6 +131,24 @@ export async function searchDeployableResources(
 	];
 
 	const needle = (filter ?? '').toLowerCase();
+
+	if (needle !== '') {
+		const serviceDatabases = await Promise.all(
+			services.map(async (service) => {
+				const entries = await records(
+					this,
+					`services/${encodeURIComponent(service.value)}/databases`,
+					'',
+				);
+				return entries.map((entry) => ({
+					name: `Service Database: ${service.name} / ${entry.name}`,
+					value: entry.value,
+				}));
+			}),
+		);
+		prefixed.push(...serviceDatabases.flat());
+	}
+
 	return {
 		results: prefixed.filter((entry) => !needle || entry.name.toLowerCase().includes(needle)),
 	};
