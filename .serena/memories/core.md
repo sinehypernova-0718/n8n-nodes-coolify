@@ -4,11 +4,11 @@ n8n community node package for the Coolify API v1. Package: `@sinehypernova-0718
 
 ## Resources
 
-Six resources; the parameter value is lowercase camelCase (except `application`), the label is singular and title cased: `application` (Application), `auditEvent` (Audit Event), `cloudInitScript` (Cloud Init Script), `cloudToken` (Cloud Token), `database` (Database), `deployment` (Deployment).
+Seven resources; the parameter value is lowercase camelCase (except `application`), the label is singular and title cased: `application` (Application), `auditEvent` (Audit Event), `cloudInitScript` (Cloud Init Script), `cloudToken` (Cloud Token), `database` (Database), `deployment` (Deployment), `destination` (Destination).
 
 ## Layout
 
-- `nodes/Coolify/Coolify.node.ts` — class `Coolify`. `nodeProperties` = resource selector + the six `...<resource>Fields` arrays. `resourceRequestBuilders` maps each resource value to its own registry, `resourceLabels` holds the labels, `asNodeError` normalises a caught error, `fetchAuditEvents` paginates audit events. `execute()` resolves `resource`/`operation`, wraps the context in `withOperationCollectionFallback`, calls the builder and sends the resulting `CoolifyRequest` through the transport. `methods` wires `listSearch` and `loadOptions`.
+- `nodes/Coolify/Coolify.node.ts` — class `Coolify`. `nodeProperties` = resource selector + the seven `...<resource>Fields` arrays. `resourceRequestBuilders` maps each resource value to its own registry, `resourceLabels` holds the labels, `asNodeError` normalises a caught error, `fetchAuditEvents` paginates audit events. `execute()` resolves `resource`/`operation`, wraps the context in `withOperationCollectionFallback`, calls the builder and sends the resulting `CoolifyRequest` through the transport. `methods` wires `listSearch` and `loadOptions`.
 - `nodes/Coolify/descriptions/<Resource>/<Resource>Description.ts` — operation selector + one field section per operation; ends with `export const <resource>Fields = groupOptionalParameters(<resource>Properties, '<resource>')`. Sibling modules hold the field sets (`applicationCreateFields.ts`, `applicationUpdateFields.ts`, `applicationFieldProperties.ts`, `storageBackupScheduleFields.ts`, `databaseCreateFields.ts`, ...); the directory `index.ts` re-exports them, `descriptions/index.ts` is the barrel.
 - `nodes/Coolify/descriptions/parameterCollections.ts` — the version 1/2 rewriting of optional fields (see `mem:conventions`). `cloudToken` is not passed through it.
 - `nodes/Coolify/requests/<resource>/<operation>.ts` — one builder per operation; `index.ts` exports `<resource>RequestBuilders`; `requests/index.ts` is the barrel; `requests/types.ts` = `CoolifyRequest` / `CoolifyRequestBuilder`.
@@ -30,4 +30,4 @@ Six resources; the parameter value is lowercase camelCase (except `application`)
 
 - No test suite and no `test` script; `test/` is an empty leftover directory. Gates: `pnpm run lint`, `pnpm run build`, `pnpm run typecheck`.
 
-Read next: `mem:conventions` (code and description patterns), `mem:tech_stack` (tooling), `mem:suggested_commands` (commands), `mem:coolify_api` (verified Applications and Deployments contracts), `mem:coolify-resource-implementation-playbook` (generic pipeline and new-resource checklist), `mem:task_completion` (done criteria).
+Read next: `mem:conventions` (code and description patterns), `mem:tech_stack` (tooling), `mem:suggested_commands` (commands), `mem:coolify_api` (verified Applications and Deployments contracts), `mem:coolify-resource-implementation-playbook` (generic pipeline and new-resource checklist), `mem:task_completion` (done criteria), `mem:release-chores` (release order, README version history and the changelog command).
