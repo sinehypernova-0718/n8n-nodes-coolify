@@ -202,6 +202,30 @@ export async function searchDestinations(
 	};
 }
 
+/**
+ * List every destination of the team, for a resource locator.
+ *
+ * This is the team-wide counterpart of {@link searchDestinations}, which reads
+ * the destinations of one selected server and is kept for the fields that
+ * depend on a server. It reads `GET /destinations`, the endpoint that lists
+ * the standalone destinations first and the swarm destinations after them,
+ * and needs no other parameter, so the options are available before a server
+ * is selected. The endpoint is not paginated and the API publishes no kind
+ * alongside the UUID, so each option is labelled with the name of the
+ * destination; use the resource's Get operation to read its network, type and
+ * server.
+ *
+ * @param this The load options context of the node.
+ * @param filter Text to narrow the options by.
+ * @returns The options of the resource locator.
+ */
+export async function searchGlobalDestinations(
+	this: ILoadOptionsFunctions,
+	filter?: string,
+): Promise<{ results: LocatorOption[] }> {
+	return { results: await records(this, 'destinations', filter ?? '') };
+}
+
 export async function getEnvironments(
 	this: ILoadOptionsFunctions,
 ): Promise<Array<{ name: string; value: string }>> {

@@ -18,6 +18,7 @@ import {
 	cloudTokenFields,
 	databaseFields,
 	deploymentFields,
+	destinationFields,
 } from './descriptions';
 import {
 	applicationRequestBuilders,
@@ -26,6 +27,7 @@ import {
 	cloudTokenRequestBuilders,
 	databaseRequestBuilders,
 	deploymentRequestBuilders,
+	destinationRequestBuilders,
 	type CoolifyRequestBuilder,
 	type CoolifyRequest,
 } from './requests';
@@ -37,6 +39,7 @@ import {
 	searchDeployableResources,
 	searchDestinations,
 	searchEnvironments,
+	searchGlobalDestinations,
 	getEnvironments,
 	getTagNames,
 	searchDatabases,
@@ -89,6 +92,7 @@ const resourceRequestBuilders: Record<string, Record<string, CoolifyRequestBuild
 	cloudToken: cloudTokenRequestBuilders,
 	database: databaseRequestBuilders,
 	deployment: deploymentRequestBuilders,
+	destination: destinationRequestBuilders,
 };
 
 /**
@@ -102,6 +106,7 @@ const resourceLabels: Record<string, string> = {
 	cloudToken: 'Cloud Token',
 	database: 'Database',
 	deployment: 'Deployment',
+	destination: 'Destination',
 };
 
 /** Maximum page size documented by the Coolify audit events endpoint. */
@@ -323,6 +328,11 @@ const nodeProperties: INodeProperties[] = [
 				value: 'deployment',
 				description: 'Manage the deployments of a Coolify team',
 			},
+			{
+				name: 'Destination',
+				value: 'destination',
+				description: 'Manage the Docker network destinations of a Coolify team',
+			},
 		],
 		default: 'application',
 	},
@@ -332,6 +342,7 @@ const nodeProperties: INodeProperties[] = [
 	...cloudTokenFields,
 	...databaseFields,
 	...deploymentFields,
+	...destinationFields,
 ];
 
 export class Coolify implements INodeType {
@@ -346,7 +357,7 @@ export class Coolify implements INodeType {
 		version: [1, 2],
 		subtitle: '={{$parameter["operation"]}}',
 		description:
-			'Manage Coolify applications, audit events, cloud init scripts, cloud tokens, databases and deployments from your n8n workflows.',
+			'Manage Coolify applications, audit events, cloud init scripts, cloud tokens, databases, deployments and destinations from your n8n workflows.',
 		defaults: {
 			name: 'Coolify',
 		},
@@ -371,6 +382,7 @@ export class Coolify implements INodeType {
 			searchCloudInitScripts,
 			searchDeployableResources,
 			searchDestinations,
+			searchGlobalDestinations,
 			searchEnvironments,
 		},
 		loadOptions: { getEnvironments, getTagNames },

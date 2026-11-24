@@ -1,0 +1,1 @@
+export { destinationFields } from './DestinationDescription';

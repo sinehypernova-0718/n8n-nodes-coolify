@@ -3,7 +3,7 @@
 Run all of these before declaring a coding task done (from the repo root, pnpm installed):
 
 1. `pnpm run lint` (eslint via `n8n-node lint`) — must be clean.
-2. `pnpm run build` (`n8n-node build`) — compiles to `dist/` without type errors; `pnpm exec tsc --noEmit` is the standalone type gate.
+2. `pnpm run build` (`n8n-node build`) — compiles to `dist/` without type errors; `pnpm run typecheck` is the standalone type gate.
 3. `pnpm exec prettier --check <changed files>` if formatting was touched (repo style: tabs, single quotes, width 100).
 
 CI (`.github/workflows/ci.yml`) runs lint + build on pull requests and on pushes to `master`; `publish.yml` publishes to npm on `v*.*.*` tags. There is no test job and no test suite.

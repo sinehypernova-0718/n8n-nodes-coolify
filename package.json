@@ -47,6 +47,7 @@
 		"lint:fix": "n8n-node lint --fix",
 		"release": "n8n-node release",
 		"release:local": "release-it",
+		"typecheck": "tsc --noEmit",
 		"prepublishOnly": "n8n-node prerelease"
 	},
 	"files": [

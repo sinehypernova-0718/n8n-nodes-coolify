@@ -24,6 +24,6 @@ Six resources; the parameter value is lowercase camelCase (except `application`)
 - `auditEvent`/`list` is the only operation `execute()` special-cases, because it paginates (`fetchAuditEvents`: 100 per page, default 50, at most 1000 pages).
 
 ## Verification
-- No test suite and no `test` script; `test/` is an empty leftover directory. Gates: `pnpm run lint`, `pnpm run build`, `pnpm exec tsc --noEmit`.
+- No test suite and no `test` script; `test/` is an empty leftover directory. Gates: `pnpm run lint`, `pnpm run build`, `pnpm run typecheck`.
 
 Read next: `mem:conventions` (code and description patterns), `mem:tech_stack` (tooling), `mem:suggested_commands` (commands), `mem:coolify_api` (verified Applications and Deployments contracts), `mem:coolify-resource-implementation-playbook` (generic pipeline and new-resource checklist), `mem:task_completion` (done criteria).

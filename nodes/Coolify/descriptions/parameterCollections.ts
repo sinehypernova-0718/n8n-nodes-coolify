@@ -78,6 +78,7 @@ const COLLECTION_LABELS: Record<string, string> = {
 	migrate: 'Migration Options',
 	update: 'Update Options',
 	createTag: 'Tag Options',
+	create: 'Destination Options',
 	createPublic: 'Application Options',
 	createPrivateGithubApp: 'Application Options',
 	createPrivateDeployKey: 'Application Options',
@@ -109,7 +110,13 @@ function isNodeProperty(value: unknown): value is INodeProperties {
 /** Group optional operation fields while retaining the resource field definitions as the source of truth. */
 export function groupOptionalParameters(
 	properties: INodeProperties[],
-	resource: 'application' | 'database' | 'cloudInitScript' | 'auditEvent' | 'deployment',
+	resource:
+		| 'application'
+		| 'database'
+		| 'cloudInitScript'
+		| 'auditEvent'
+		| 'deployment'
+		| 'destination',
 ): INodeProperties[] {
 	const groups = new Map<string, INodeProperties[]>();
 	const retained: INodeProperties[] = [];
