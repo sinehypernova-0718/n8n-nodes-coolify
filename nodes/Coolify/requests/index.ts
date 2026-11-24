@@ -131,4 +131,26 @@ export {
 	requireDeploymentApplicationUuid,
 	requireDeploymentUuid,
 } from './deployment';
+export {
+	buildCreateDestinationBody,
+	buildUpdateDestinationBody,
+	createDestinationRequest,
+	deleteDestinationRequest,
+	destinationFieldProperty,
+	destinationFieldSpecs,
+	destinationRequestBuilders,
+	getDestinationRequest,
+	listDestinationsByServerRequest,
+	listTeamDestinationsRequest,
+	readDestinationName,
+	readDestinationNetwork,
+	requireDestinationServerUuid,
+	requireDestinationUuid,
+	updateDestinationRequest,
+	DESTINATION_FIELDS,
+	DESTINATION_NAME_MAX_LENGTH,
+	DESTINATION_NETWORK_MAX_LENGTH,
+	DESTINATION_NETWORK_PATTERN,
+	type DestinationFieldSpec,
+} from './destination';
 export type { CoolifyRequest, CoolifyRequestBuilder } from './types';

@@ -3,7 +3,7 @@
 - Install deps: `pnpm install`
 - Lint: `pnpm run lint`; autofix: `pnpm run lint:fix`
 - Build: `pnpm run build`; watch: `pnpm run build:watch`
-- Type check only: `pnpm exec tsc --noEmit`
+- Type check only: `pnpm run typecheck`
 - Format check (changed files only): `pnpm exec prettier --check <paths>`
 - Dev n8n with the node loaded: `pnpm run dev`
 - Local release (bump+changelog+tag+push): `pnpm run release:local` — CI publish entry point: `pnpm run release`

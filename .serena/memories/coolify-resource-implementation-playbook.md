@@ -358,7 +358,7 @@ Follow this checklist strictly when introducing a new resource:
 - [ ] Update node description subtitle or overview comments if needed.
 
 ### Phase 6: Verification Gates
-- [ ] Run type check: `pnpm exec tsc --noEmit`.
+- [ ] Run type check: `pnpm run typecheck`.
 - [ ] Run linter: `pnpm run lint`.
 - [ ] Run build: `pnpm run build`.
 - [ ] Inspect generated `dist/` bundle to ensure all files and declarations compile cleanly.

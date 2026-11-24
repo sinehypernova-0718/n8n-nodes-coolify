@@ -26,6 +26,7 @@
 - **Cloud init scripts** — create, read, update, and delete the reusable cloud init scripts of the team on the `Cloud Init Script` resource.
 - **Cloud tokens** — list, inspect, create, rename, delete, and validate the cloud provider tokens of the team on the `Cloud Token` resource.
 - **Deployments** — deploy applications, services and databases, and cancel, get or list the deployments of a team on the `Deployment` resource.
+- **Destinations** — create, read, update, delete and list the Docker network destinations of a team on the `Destination` resource.
 - **Preview deployments** — open, list, inspect, and delete preview deployments for pull requests.
 - **Rate-limit aware transport** — one shared transport that honours the server's rate-limit headers and retries only requests that are safe to repeat.
 
@@ -52,6 +53,7 @@ n8n-nodes-coolify/
 │       │   ├── CloudToken/
 │       │   ├── Database/
 │       │   ├── Deployment/
+│       │   ├── Destination/
 │       │   └── index.ts
 │       ├── requests/
 │       │   ├── application/
@@ -62,6 +64,7 @@ n8n-nodes-coolify/
 │       │   ├── cloudToken/
 │       │   ├── database/
 │       │   ├── deployment/
+│       │   ├── destination/
 │       │   ├── types.ts
 │       │   └── index.ts
 │       └── shared/
@@ -79,7 +82,7 @@ n8n-nodes-coolify/
 
 - **`credentials/`** — defines the Coolify API credential used to authenticate requests.
 - **`descriptions/`** — contains the resource and operation definitions displayed in the n8n editor. Its `index.ts` explicitly exports the descriptions consumed by the main node.
-- **`requests/<resource>/`** — contains the request builders of a resource; the node implements the `application`, `auditEvent`, `cloudInitScript`, `cloudToken` and `database` resources.
+- **`requests/<resource>/`** — contains the request builders of a resource; the node implements the `application`, `auditEvent`, `cloudInitScript`, `cloudToken`, `database`, `deployment` and `destination` resources.
 - **`requests/<resource>/<operation>.ts`** — keeps individual API request builders in separate operation-specific modules, such as `list.ts`, `get.ts`, `createPublic.ts`, and `update.ts`.
 - **Resource `index.ts` files** — explicitly export the request builders belonging to each resource.
 - **`requests/index.ts`** — re-exports the resource-level barrels, providing a single import entry point for request modules.
@@ -114,7 +117,7 @@ The Coolify node exposes the supported Coolify API operations through n8n's reso
 
 ### Application
 
-The node exposes six resources — **Application**, with 42 operations, **Audit Event**, with the List operation, **Cloud Init Script**, with 5 operations, **Cloud Token**, with 6 operations, **Database**, with 17 operations, and **Deployment**, with 5 operations. The other Coolify resources (services, servers, projects) are not exposed yet.
+The node exposes seven resources — **Application**, with 42 operations, **Audit Event**, with the List operation, **Cloud Init Script**, with 5 operations, **Cloud Token**, with 6 operations, **Database**, with 17 operations, **Deployment**, with 5 operations, and **Destination**, with 6 operations. The other Coolify resources (services, servers, projects) are not exposed yet.
 
 Every operation is sent through the shared transport, so the rate limit and retry policy described below applies to all of them: reads are retried when the server reports a transient failure, writes are never repeated automatically.
 
@@ -331,6 +334,31 @@ The Deployment resource exposes the deployments of a Coolify team through five o
 
 > **Note:** the `Resource UUID` locator lists the applications, the services, the standalone databases and the databases of each service of the team. Because the databases of a service are read one service at a time, n8n only queries the locator after a search term is entered and caches the result of each query, so the list stays responsive on a large team. A service whose databases cannot be read only omits its own entries and writes a warning to the n8n log; the rest of the list is still returned, and that service's database UUID can be entered with `By UUID`. `By UUID` accepts any resource UUID directly, and the `Tag` locator offers the tags of the team.
 
+### Destination
+
+The Destination resource exposes the Docker network destinations of a Coolify team through six operations. A destination is the network a server hosts its resources on: every server has at least one, and the applications, services and databases of the team are attached to one. `List` and `List by Server` read the destinations the API already knows; a destination is created with `Create` or outside the node with the Coolify interface.
+
+#### Managing destinations
+
+| Operation        | Description                                                           |
+| ---------------- | --------------------------------------------------------------------- |
+| `List`           | List every destination of the team, the standalone destinations first |
+| `List by Server` | List the destinations attached to one server                          |
+| `Get`            | Get a destination by UUID                                             |
+| `Create`         | Create a destination on a server from a Docker network name           |
+| `Update`         | Rename a destination by UUID                                          |
+| `Delete`         | Delete an unused destination by UUID, the deletion is permanent       |
+
+> **Note:** `List` and `List by Server` return a plain array; the endpoints are not paginated, so the operations offer no `Return All` or `Limit` option. `Create`, `Get`, `List`, `List by Server` and `Update` return a destination object that carries its name, Docker network, type (`standalone` or `swarm`) and the UUID of its server. `Delete` returns a confirmation message (`{"message":"Deleted."}`) instead of the destination.
+
+> **Note:** `Create` needs a server and a Docker network name. Coolify derives the type of the destination from the server, a standalone destination on a standalone server and a swarm destination on a swarm server, so the node exposes no type selector. The network name has to be unique on the server, a network that already exists is answered with HTTP 409. A name that is left empty is generated by Coolify from the server and the network.
+
+> **Note:** `Update` changes the name only; the network of a destination cannot be changed through the API, and the endpoint rejects every other field with HTTP 422. The name is required, so the operation always sends one.
+
+> **Note:** `Delete` is permanent. Deleting a standalone destination also disconnects and removes its Docker network from the server. A destination that still has applications, databases or services attached cannot be deleted and is answered with HTTP 409; detach them first. The node surfaces that error instead of reporting a deletion that did not happen.
+
+> **Note:** the `Destination UUID` locator of `Get`, `Update` and `Delete` lists every destination of the team through `GET /destinations`, so it needs no server to be selected first. The `Server UUID` locator of `Create` and `List by Server` lists the servers of the team.
+
 Operation parameters, filters, and available fields vary by endpoint. Refer to the operation descriptions in the n8n editor and the [Coolify API documentation](https://coolify.io/docs/api/overview) for endpoint-specific requirements.
 
 This list describes the resources currently implemented in the integration. Additional resources and operations can be introduced in future releases.
@@ -385,7 +413,7 @@ This package is designed for n8n's community node ecosystem and uses the n8n nod
 - **Integration type:** n8n community node.
 - **Implementation language:** TypeScript.
 - **API:** Coolify API v1.
-- **Coolify version:** Depends on the target Coolify instance's API version. The credential test uses `GET /team`, the canonical endpoint for "the team bound to the token" in the [Coolify OpenAPI specification](https://github.com/coollabsio/coolify/blob/main/openapi.yaml); the credential documents this endpoint as available from Coolify 4.3.0. The request contracts of the operations were aligned against the Coolify OpenAPI specification of a recent Coolify 4.x release, and some operations send fields that only recent releases publish, so on an older instance those fields may be rejected. Whether a given endpoint or field is accepted therefore depends on the version of Coolify you run; consult the Coolify API documentation for your instance and do not assume every field is supported by every stable release. The database creation contract and the database update exclusions were verified against the Coolify v4.5.1 OpenAPI specification and controller; `Create (SQLite)`, which is absent from v4.3.0, requires Coolify v4.4.0 or later. The Deployment contract was verified against the Coolify v4.4.6 OpenAPI specification and `DeployController`; the `cancel_previous` query parameter that later releases add to `Deploy` is deliberately not exposed, so the operation stays within the v4.4.6 contract. The exact minimum Coolify version supported by every other operation is not verified in this repository and needs review.
+- **Coolify version:** Depends on the target Coolify instance's API version. The credential test uses `GET /team`, the canonical endpoint for "the team bound to the token" in the [Coolify OpenAPI specification](https://github.com/coollabsio/coolify/blob/main/openapi.yaml); the credential documents this endpoint as available from Coolify 4.3.0. The request contracts of the operations were aligned against the Coolify OpenAPI specification of a recent Coolify 4.x release, and some operations send fields that only recent releases publish, so on an older instance those fields may be rejected. Whether a given endpoint or field is accepted therefore depends on the version of Coolify you run; consult the Coolify API documentation for your instance and do not assume every field is supported by every stable release. The database creation contract and the database update exclusions were verified against the Coolify v4.5.1 OpenAPI specification and controller; `Create (SQLite)`, which is absent from v4.3.0, requires Coolify v4.4.0 or later. The Deployment contract was verified against the Coolify v4.4.6 OpenAPI specification and `DeployController`; the `cancel_previous` query parameter that later releases add to `Deploy` is deliberately not exposed, so the operation stays within the v4.4.6 contract. The Destination contract was verified against the Coolify v4.4.6 OpenAPI specification and `DestinationsController`: the OpenAPI publishes an optional `type` on the creation endpoint that the controller forbids when it disagrees with the server, so the node omits it and lets the API infer the type, and the OpenAPI does not mark the `name` of the update endpoint as required although the controller requires it, so the node requires it. The exact minimum Coolify version supported by every other operation is not verified in this repository and needs review.
 - **Authentication:** Coolify API token (Bearer), with the `read` permission.
 - **Package distribution:** npm — end users install the published package with the n8n community nodes interface, and npm remains the registry the package is published to.
 - **Development package manager:** pnpm — the repository is developed, built, and published with pnpm, pinned through the `packageManager` field in `package.json` and `pnpm-lock.yaml`.
@@ -447,6 +475,7 @@ pnpm install
 | `pnpm run dev`           | Start n8n with your node and watch for changes (runs `n8n-node dev`)                                                                    |
 | `pnpm run build`         | Compile TypeScript to JavaScript for production (runs `n8n-node build`)                                                                 |
 | `pnpm run build:watch`   | Build in watch mode (auto-rebuild on changes)                                                                                           |
+| `pnpm run typecheck`     | Type-check the project without emitting files (runs `tsc --noEmit`)                                                                     |
 | `pnpm run lint`          | Check your code for errors and style issues (runs `n8n-node lint`)                                                                      |
 | `pnpm run lint:fix`      | Automatically fix linting issues when possible (runs `n8n-node lint --fix`)                                                             |
 | `pnpm run release:local` | Create a release locally: bump the version, update the changelog, commit, tag (`vX.Y.Z`), and push — this triggers the publish workflow |

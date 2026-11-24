@@ -506,15 +506,17 @@ description; read them before writing one:
 
 ### Commands
 
-| Purpose                        | Command                                                                        |
-| ------------------------------ | ------------------------------------------------------------------------------ |
-| Install                        | `pnpm install`                                                                 |
-| Lint                           | `pnpm run lint` (eslint via `n8n-node lint`; autofix `pnpm run lint:fix`)      |
-| Build                          | `pnpm run build` (watch: `pnpm run build:watch`)                               |
-| Type check only                | `pnpm exec tsc --noEmit` (use the local compiler; no `test/` directory exists) |
-| Format check                   | `pnpm exec prettier --check .` (only when formatting was touched)              |
-| Local n8n with the node loaded | `pnpm run dev`                                                                 |
-| Local release                  | `pnpm run release:local` (CI publish entry point: `pnpm run release`)          |
+| Purpose                        | Command                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------- |
+| Install                        | `pnpm install`                                                            |
+| Lint                           | `pnpm run lint` (eslint via `n8n-node lint`; autofix `pnpm run lint:fix`) |
+| Build                          | `pnpm run build` (watch: `pnpm run build:watch`)                          |
+| Type check only                | `pnpm run typecheck` (local `tsc --noEmit`)                               |
+| Format check                   | `pnpm exec prettier --check .` (only when formatting was touched)         |
+| Local n8n with the node loaded | `pnpm run dev`                                                            |
+| Local release                  | `pnpm run release:local` (CI publish entry point: `pnpm run release`)     |
+
+Run the type gate through `pnpm run typecheck`, never a bare `pnpm exec tsc`: a globally installed TypeScript can shadow the pinned local compiler, while an npm/pnpm script resolves it from `node_modules/.bin`.
 
 CI runs `lint` → `build` on pull requests and on pushes to `master` (there is no test script
 in this repository); `publish.yml` publishes to npm on `v*.*.*` tags. The default branch is `master`, not

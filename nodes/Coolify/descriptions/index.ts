@@ -4,3 +4,4 @@ export { cloudInitScriptFields } from './CloudInitScript';
 export { cloudTokenFields } from './CloudToken';
 export { databaseFields } from './Database';
 export { deploymentFields } from './Deployment';
+export { destinationFields } from './Destination';

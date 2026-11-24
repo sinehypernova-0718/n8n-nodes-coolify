@@ -31,7 +31,7 @@ spec win and the disagreement itself is a finding.
 
 ## 0. Verification standards (binding, never weakened)
 
-1. A successful `pnpm run lint` / `pnpm run build` / `pnpm exec tsc --noEmit` proves
+1. A successful `pnpm run lint` / `pnpm run build` / `pnpm run typecheck` proves
    types and style, **never** API correctness.
 2. Following an existing convention proves consistency, **not** correctness — a
    wrong-but-consistent implementation passes every convention check.
@@ -135,7 +135,7 @@ on every change that adds or removes an operation (no test enforces it).
 - **No test suite and no `test` script.** A `test/` directory exists in the local working
   tree but is empty and untracked, and `tsconfig.json` excludes it.
 - The only executable gates are `pnpm run lint`, `pnpm run build` and
-  `pnpm exec tsc --noEmit`; formatting is `pnpm exec prettier --check <changed files>`.
+  `pnpm run typecheck`; formatting is `pnpm exec prettier --check <changed files>`.
 - "Add missing coverage" in a code task therefore means: state that a test layer is
   absent, exercise the behaviour by reading the compiled/`tsc`-checked code and comparing
   it to the contract, and flag the coverage gap — do not invent a framework.
@@ -235,7 +235,7 @@ Run every group for every resource.
 - [ ] `loadOptionsDependsOn` refers to root parameter names (never a collection path).
 
 **Types**
-- [ ] `pnpm exec tsc --noEmit` clean; no `any` leaks; `unknown` narrowed before use.
+- [ ] `pnpm run typecheck` clean; no `any` leaks; `unknown` narrowed before use.
 - [ ] `strict`, `noUnusedLocals`, `noImplicitReturns`, `noImplicitAny` all respected.
 
 **n8n v2 compatibility**
@@ -351,7 +351,7 @@ snippet alone is never enough to call something verified.
 8. **Audit UI behaviour** and n8n v1/v2 compatibility (§4, n8n v2 group).
 9. **Inspect types, edge cases, errors, pagination and security** (§4 groups).
 10. **Review tests / coverage**: record the absence of a test suite; do not fabricate one.
-11. **Run the gates**: `pnpm run lint`, `pnpm run build`, `pnpm exec tsc --noEmit`; run
+11. **Run the gates**: `pnpm run lint`, `pnpm run build`, `pnpm run typecheck`; run
     `pnpm exec prettier --check <changed files>` only for touched files. Report real output.
 12. **Review documentation and the final diff** (`git status`, `git diff`).
 13. **Produce the findings report** (§8): severity, file paths, evidence, recommended
