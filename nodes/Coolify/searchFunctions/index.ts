@@ -106,9 +106,12 @@ export async function searchCloudInitScripts(
  * list mode of the field requires a search filter: n8n debounces the filter
  * and caches each query's result, so the fan-out runs once per distinct query
  * instead of once per keystroke. An empty filter returns the three flat lists
- * without the fan-out. The API publishes no kind alongside a UUID, so every
- * option is labelled with the kind of the resource, which keeps the namespaces
- * apart when two resources share a name.
+ * without the fan-out. A failure of one service's database lookup is isolated:
+ * the options of the other services are still returned, and the partial result
+ * is recorded in the log instead of being presented as complete. The API
+ * publishes no kind alongside a UUID, so every option is labelled with the
+ * kind of the resource, which keeps the namespaces apart when two resources
+ * share a name.
  *
  * @param this The load options context of the node.
  * @param filter Text to narrow the options by.
@@ -133,7 +136,7 @@ export async function searchDeployableResources(
 	const needle = (filter ?? '').toLowerCase();
 
 	if (needle !== '') {
-		const serviceDatabases = await Promise.all(
+		const settled = await Promise.allSettled(
 			services.map(async (service) => {
 				const entries = await records(
 					this,
@@ -146,7 +149,27 @@ export async function searchDeployableResources(
 				}));
 			}),
 		);
-		prefixed.push(...serviceDatabases.flat());
+
+		// One unreachable service must not hide the databases of the others, so
+		// a failed lookup only drops its own options. The list is then partial,
+		// which the log records instead of returning it as a complete result.
+		const failedServices: string[] = [];
+		settled.forEach((result, index) => {
+			if (result.status === 'fulfilled') {
+				prefixed.push(...result.value);
+			} else {
+				failedServices.push(services[index].name);
+			}
+		});
+
+		if (failedServices.length > 0) {
+			const message = `Could not read the databases of ${failedServices.length} of ${services.length} services (${failedServices.join(', ')}). Their databases are missing from the deployment target list.`;
+			if (failedServices.length === services.length) {
+				this.logger.error(message);
+			} else {
+				this.logger.warn(message);
+			}
+		}
 	}
 
 	return {
