@@ -54,6 +54,7 @@ Response Normalization & Return (`Coolify.execute()`)
 ```
 
 ### Exact Symbols and Files by Stage
+
 - **Credential Definition**: `credentials/CoolifyApi.credentials.ts` -> class `CoolifyApi` (`ICredentialType`).
 - **Main Node**: `nodes/Coolify/Coolify.node.ts` -> class `Coolify` (`INodeType`), properties array `nodeProperties`.
 - **Search Functions**: `nodes/Coolify/searchFunctions/index.ts` -> `searchApplications`, `searchDatabases`, `searchProjects`, `searchServers`, `searchTags`, `searchCloudInitScripts`, `searchDestinations`, `searchEnvironments`, `getTagNames`.
@@ -72,6 +73,7 @@ Response Normalization & Return (`Coolify.execute()`)
 Adding a new resource `<resource>` (e.g. `service`, `privateKey`, `project`) requires a coordinated set of files split cleanly between **UI Descriptions** and **Request Builders**.
 
 ### Directory Structure
+
 ```text
 nodes/Coolify/
 ├── descriptions/
@@ -95,6 +97,7 @@ nodes/Coolify/
 ```
 
 ### File Responsibilities & Naming Rules
+
 1. **`descriptions/<Resource>/<Resource>Description.ts`**:
    - Declares `const <resource>Properties: INodeProperties[]`.
    - Starts with `Operation` options property (`name: 'operation'`), listing implemented operations with `name`, `value`, `description`, `action`.
@@ -128,6 +131,7 @@ nodes/Coolify/
 ## 3. UI Description Conventions
 
 ### Display Options & Scoping
+
 - Always specify both `resource` and `operation` in `displayOptions.show`:
   ```typescript
   displayOptions: {
@@ -140,6 +144,7 @@ nodes/Coolify/
 - Mutually exclusive parameters for different operations may share the same parameter name (e.g., required `name` on `create` vs optional `name` on `update`), distinguished solely by `operation` array.
 
 ### Resource Locators (`resourceLocator`)
+
 - Used for UUID fields referencing other resources (`projectUuid`, `serverUuid`, `destinationUuid`, `applicationUuid`, `databaseUuid`, `cloudInitScriptUuid`):
   ```typescript
   {
@@ -163,6 +168,7 @@ nodes/Coolify/
   ```
 
 ### Dynamic Dropdown Dependencies & Stale-Option Prevention
+
 - When a locator depends on another parameter (e.g., `destinationUuid` depends on `serverUuid`):
   ```typescript
   typeOptions: {
@@ -172,14 +178,16 @@ nodes/Coolify/
 - **Crucial Rule**: The path in `loadOptionsDependsOn` MUST reference the root parameter name (`'serverUuid.value'`), never a collection path (like `'applicationCreateOptions.serverUuid.value'`).
 - Inside `searchFunctions/index.ts`, the search function checks `this.getCurrentNodeParameter('operation')`, checks for the value in the options collection if present, and falls back to root:
   ```typescript
-  const server = object(options) && options.serverUuid !== undefined
-    ? options.serverUuid
-    : this.getCurrentNodeParameter('serverUuid');
+  const server =
+  	object(options) && options.serverUuid !== undefined
+  		? options.serverUuid
+  		: this.getCurrentNodeParameter('serverUuid');
   const serverUuid = locatorValue(server).trim();
   if (!serverUuid) return { results: [] };
   ```
 
 ### Dual-Version Support (v1 vs v2)
+
 - Node declared with `version: [1, 2]`. Version 2 is the default modern layout.
 - `groupOptionalParameters(properties, resource)` in `parameterCollections.ts`:
   - Derives an options collection named `operationOptionsParameterName(resource, operation)` (format: `<resource><Operation>Options`, e.g. `applicationCreatePublicOptions`).
@@ -191,14 +199,15 @@ nodes/Coolify/
 - Collection labels are looked up in `COLLECTION_LABELS` in `parameterCollections.ts`, falling back to `'Optional Settings'`.
 
 ### Three-State Boolean Controls (Partial Updates)
+
 - For partial updates (e.g. `database:update`), standard checkboxes cannot distinguish between "set to false" and "leave unchanged".
 - Instead, use an options dropdown with `DATABASE_UPDATE_BOOLEAN_OPTIONS`:
   ```typescript
   export const DATABASE_UPDATE_UNCHANGED = 'unchanged';
   export const DATABASE_UPDATE_BOOLEAN_OPTIONS = [
-    { name: 'Unchanged', value: DATABASE_UPDATE_UNCHANGED },
-    { name: 'Enabled', value: 'true' },
-    { name: 'Disabled', value: 'false' },
+  	{ name: 'Unchanged', value: DATABASE_UPDATE_UNCHANGED },
+  	{ name: 'Enabled', value: 'true' },
+  	{ name: 'Disabled', value: 'false' },
   ];
   ```
 - Request builder checks:
@@ -213,7 +222,9 @@ nodes/Coolify/
 ## 4. Request Builder Conventions
 
 ### Function Signature
+
 Every request builder must conform to `CoolifyRequestBuilder`:
+
 ```typescript
 import type { IExecuteFunctions } from 'n8n-workflow';
 import type { CoolifyRequest } from '../types';
@@ -225,13 +236,15 @@ export async function <operation><Resource>Request(
 ```
 
 ### Path & URL Construction
+
 - `path` is relative to credential base URL (`host`). Never include `/api/v1` or leading slashes.
 - UUIDs and string identifiers interpolated into paths MUST be sanitized with `encodePathSegment(uuid)`:
   ```typescript
-  path: `applications/${applicationUuid}/start`
+  path: `applications/${applicationUuid}/start`;
   ```
 
 ### Parameter Retrieval
+
 - With collection fallback active, use:
   ```typescript
   const value = this.getNodeParameter('fieldName', itemIndex, defaultValue);
@@ -247,6 +260,7 @@ export async function <operation><Resource>Request(
   ```
 
 ### Payload & Query Omission Invariants
+
 - **Never send empty strings**: `TrimStrings` on Coolify converts `""` to `null`, causing 422 errors on non-nullable fields.
 - **Never send empty lists or dummy defaults**.
 - **Booleans**:
@@ -256,6 +270,7 @@ export async function <operation><Resource>Request(
 - **Numbers**: validate bounds (e.g. `limit >= 1`, port `1..65535`).
 
 ### Retry Safety Rules
+
 - Set `retrySafety: 'safe'` only if repeating the request is completely idempotent and free of side effects (e.g. `stop` operation on an already stopped app).
 - Set `retrySafety: 'unsafe'` for all deletions, deployments, queue runs, and creations.
 - By default, GET is `safe`, all mutations (POST, PATCH, PUT, DELETE) default to `unsafe`.
@@ -265,6 +280,7 @@ export async function <operation><Resource>Request(
 ## 5. Shared Infrastructure & Transport
 
 ### Credentials (`credentials/CoolifyApi.credentials.ts`)
+
 - Credential name: `coolifyApi`.
 - Fields: `host` (Base URL, default `https://app.coolify.io/api/v1`) and `accessToken` (password).
 - Verification test: `GET /team`. Maps response codes:
@@ -274,17 +290,20 @@ export async function <operation><Resource>Request(
   - 404: Base URL missing `/api/v1` or Coolify < 4.3.0.
 
 ### Transport (`nodes/Coolify/shared/apiRequest.ts`)
+
 - Function: `coolifyApiRequest(ctx, method, path, options)`.
 - Enforces `REQUEST_TIMEOUT_MS = 30_000`.
 - Sets `returnFullResponse: true` and `ignoreHttpStatusErrors: true` to inspect rate-limit headers.
 - URL construction: strips trailing slashes from credential host and leading slashes from path.
 
 ### Rate Limiting & Backoff (`nodes/Coolify/shared/rateLimit.ts`)
+
 - Never hardcodes rate limit values; uses response headers (`Retry-After`, `X-RateLimit-Reset`).
 - Backoff parameters: `MAX_RETRIES = 3`, `BASE_BACKOFF_MS = 500`, `MAX_BACKOFF_MS = 30_000`, `JITTER_MS = 500`, `MAX_RETRY_AFTER_MS = 60_000`.
 - Classifies failures into `safe-rate-limit`, `unsafe-rate-limit`, `safe-transient`, `unsafe-transient`, `terminal`.
 
 ### Error Propagation (`asNodeError` in `Coolify.node.ts`)
+
 - `NodeApiError` and `NodeOperationError` pass through directly to retain upstream status code, message, and response body in the n8n UI.
 - All other generic errors are wrapped in `NodeOperationError(node, error, { itemIndex })`.
 
@@ -294,16 +313,17 @@ export async function <operation><Resource>Request(
 
 When implementing new resources, be aware of existing patterns and historical deviations:
 
-| Resource | Locators Used? | UUID Parameter Name | Grouped via `groupOptionalParameters`? | Has Dedicated Search Functions? | Special Execution Logic? |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Application** | Yes (`resourceLocator`) | `applicationUuid` | Yes | Yes (`searchApplications`) | None |
-| **Database** | Yes (`resourceLocator`) | `databaseUuid` | Yes | Yes (`searchDatabases`) | Three-state update options |
-| **Cloud Init Script** | Yes (`resourceLocator`) | `cloudInitScriptUuid`| Yes | Yes (`searchCloudInitScripts`) | None |
-| **Cloud Token** | No (plain `string`) | `uuid` *(Deviation)* | **No** *(All fields required)* | No | Permission 403 doc warnings |
-| **Audit Event** | N/A (list only) | N/A | Yes | No | **Custom pagination in `execute()`** |
-| **Deployment** | Yes (`resourceLocator`) | `deploymentUuid` / `resourceUuid` / `applicationUuid` | Yes | Yes (`searchDeployableResources`, `searchTags`, `searchApplications`) | None |
+| Resource              | Locators Used?          | UUID Parameter Name                                   | Grouped via `groupOptionalParameters`? | Has Dedicated Search Functions?                                       | Special Execution Logic?             |
+| :-------------------- | :---------------------- | :---------------------------------------------------- | :------------------------------------- | :-------------------------------------------------------------------- | :----------------------------------- |
+| **Application**       | Yes (`resourceLocator`) | `applicationUuid`                                     | Yes                                    | Yes (`searchApplications`)                                            | None                                 |
+| **Database**          | Yes (`resourceLocator`) | `databaseUuid`                                        | Yes                                    | Yes (`searchDatabases`)                                               | Three-state update options           |
+| **Cloud Init Script** | Yes (`resourceLocator`) | `cloudInitScriptUuid`                                 | Yes                                    | Yes (`searchCloudInitScripts`)                                        | None                                 |
+| **Cloud Token**       | No (plain `string`)     | `uuid` _(Deviation)_                                  | **No** _(All fields required)_         | No                                                                    | Permission 403 doc warnings          |
+| **Audit Event**       | N/A (list only)         | N/A                                                   | Yes                                    | No                                                                    | **Custom pagination in `execute()`** |
+| **Deployment**        | Yes (`resourceLocator`) | `deploymentUuid` / `resourceUuid` / `applicationUuid` | Yes                                    | Yes (`searchDeployableResources`, `searchTags`, `searchApplications`) | None                                 |
 
 ### Key Deviations & Pitfalls to Note:
+
 1. **`CloudToken` parameter naming**: `cloudToken` uses parameter name `uuid` instead of `cloudTokenUuid`. For all new resources, prefer `<resource>Uuid` to prevent parameter name collisions across resources.
 2. **Exclusion from `groupOptionalParameters`**: `cloudToken` is not processed by `groupOptionalParameters` because all its operations take only required fields. If a resource has no optional parameters, it can export its property array directly.
 3. **Union Types in `parameterCollections.ts` and `parameterResolution.ts`**:
@@ -323,11 +343,13 @@ When implementing new resources, be aware of existing patterns and historical de
 Follow this checklist strictly when introducing a new resource:
 
 ### Phase 1: API Contract Inspection
+
 - [ ] Inspect official OpenAPI / upstream controller for endpoints, allowed fields, required flags, and HTTP status codes.
 - [ ] Determine required vs optional fields. Note whether partial updates allow clearing fields or reject empty strings.
 - [ ] Determine retry safety for mutations (almost always `unsafe` unless idempotency is verified).
 
 ### Phase 2: Request Builders (`nodes/Coolify/requests/<resource>/`)
+
 - [ ] Create `requests/<resource>/parameters.ts`: implement `require<Resource>Uuid()` using `locatorValue` and `encodePathSegment`.
 - [ ] Create `requests/<resource>/<resource>Fields.ts`: declare field specs, UI name mappings, and body builders (`buildCreate<Resource>Body`, `buildUpdate<Resource>Body`).
 - [ ] Create individual operation files: `<operation>.ts` returning `CoolifyRequest`.
@@ -335,6 +357,7 @@ Follow this checklist strictly when introducing a new resource:
 - [ ] Export `<resource>RequestBuilders` in `nodes/Coolify/requests/index.ts`.
 
 ### Phase 3: UI Descriptions (`nodes/Coolify/descriptions/<Resource>/`)
+
 - [ ] Create `descriptions/<Resource>/<Resource>Description.ts`:
   - Define operation selector with `noDataExpression: true`.
   - Define operation properties with `displayOptions.show: { resource: ['<resource>'], operation: [...] }`.
@@ -347,10 +370,12 @@ Follow this checklist strictly when introducing a new resource:
 - [ ] Export `<resource>Fields` in `nodes/Coolify/descriptions/index.ts`.
 
 ### Phase 4: Search & Locator Support (`nodes/Coolify/searchFunctions/`)
+
 - [ ] If resource has a list endpoint and can be referenced by other resources: add `search<Resource>s` in `nodes/Coolify/searchFunctions/index.ts`.
 - [ ] Wire the search function into `methods.listSearch` in `nodes/Coolify/Coolify.node.ts`.
 
 ### Phase 5: Node Registration (`nodes/Coolify/Coolify.node.ts`)
+
 - [ ] Add option entry to `resource` parameter in `nodeProperties` (`name: '<Resource>', value: '<resource>'`).
 - [ ] Spread `...<resource>Fields` into `nodeProperties`.
 - [ ] Register `<resource>RequestBuilders` in `resourceRequestBuilders` map.
@@ -358,6 +383,7 @@ Follow this checklist strictly when introducing a new resource:
 - [ ] Update node description subtitle or overview comments if needed.
 
 ### Phase 6: Verification Gates
+
 - [ ] Run type check: `pnpm run typecheck`.
 - [ ] Run linter: `pnpm run lint`.
 - [ ] Run build: `pnpm run build`.

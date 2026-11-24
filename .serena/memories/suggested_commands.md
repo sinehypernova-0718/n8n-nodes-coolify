@@ -10,6 +10,7 @@
 - No test command exists: `package.json` has no `test` script and no test framework is installed.
 
 Notes:
+
 - Repo default branch is `master`, not `main`.
 - Repo files use LF endings and tabs (prettier `useTabs: true`, `endOfLine: 'lf'`).
 - Scope the Prettier check to the changed files: the repository-wide check fails on pre-existing files.

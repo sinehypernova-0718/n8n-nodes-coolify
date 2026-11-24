@@ -9,6 +9,7 @@ Run all of these before declaring a coding task done (from the repo root, pnpm i
 CI (`.github/workflows/ci.yml`) runs lint + build on pull requests and on pushes to `master`; `publish.yml` publishes to npm on `v*.*.*` tags. There is no test job and no test suite.
 
 Additional rules:
+
 - The operation values of a resource's description and the keys of its `<resource>RequestBuilders` registry must be the same set. No test enforces it — reconcile the two files by hand in every change that adds or removes an operation.
 - A check that only asserts what the code already does proves nothing: after changing a request builder, compare its method, path, body keys and query keys with the verified contract, and compare the field contract with the endpoint's property set in `openapi.yaml`.
 - Scope the Prettier check to the changed files. The repository is kept formatted with `prettier --write .`; a file edited at the same time can still make the repository-wide check fail. Do not reformat a file you did not change — report the failure instead.

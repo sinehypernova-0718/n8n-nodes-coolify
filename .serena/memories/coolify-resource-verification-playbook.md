@@ -56,13 +56,13 @@ spec win and the disagreement itself is a finding.
 The working tree at `master` implements **five** resources (VERIFIED by reading
 `nodes/Coolify/Coolify.node.ts`):
 
-| resource value   | label           | description file                                              | registry symbol                 | operations |
-| ---------------- | --------------- | ------------------------------------------------------------- | ------------------------------- | ---------: |
-| `application`    | Application     | `descriptions/Application/ApplicationDescription.ts`          | `applicationRequestBuilders`    |         42 |
-| `auditEvent`     | Audit Event     | `descriptions/AuditEvent/AuditEventDescription.ts`            | `auditEventRequestBuilders`     |          1 |
-| `cloudInitScript`| Cloud Init Script | `descriptions/CloudInitScript/CloudInitScriptDescription.ts`| `cloudInitScriptRequestBuilders`|          5 |
-| `cloudToken`     | Cloud Token     | `descriptions/CloudToken/CloudTokenDescription.ts`            | `cloudTokenRequestBuilders`     |          6 |
-| `database`       | Database        | `descriptions/Database/DatabaseDescription.ts`                | `databaseRequestBuilders`       |         17 |
+| resource value    | label             | description file                                             | registry symbol                  | operations |
+| ----------------- | ----------------- | ------------------------------------------------------------ | -------------------------------- | ---------: |
+| `application`     | Application       | `descriptions/Application/ApplicationDescription.ts`         | `applicationRequestBuilders`     |         42 |
+| `auditEvent`      | Audit Event       | `descriptions/AuditEvent/AuditEventDescription.ts`           | `auditEventRequestBuilders`      |          1 |
+| `cloudInitScript` | Cloud Init Script | `descriptions/CloudInitScript/CloudInitScriptDescription.ts` | `cloudInitScriptRequestBuilders` |          5 |
+| `cloudToken`      | Cloud Token       | `descriptions/CloudToken/CloudTokenDescription.ts`           | `cloudTokenRequestBuilders`      |          6 |
+| `database`        | Database          | `descriptions/Database/DatabaseDescription.ts`               | `databaseRequestBuilders`        |         17 |
 
 Total: **71 operations**. The counts above are VERIFIED and mutually consistent: the
 number of `action:` entries in each `<Resource>Description.ts` equals the number of keys
@@ -90,8 +90,8 @@ on every change that adds or removes an operation (no test enforces it).
   - `description.version: [1, 2]`, `usableAsTool: true`, `group: ['input']`,
     `inputs`/`outputs` use `NodeConnectionTypes.Main`; credential `coolifyApi`.
   - `methods.listSearch` = `{ searchApplications, searchDatabases, searchProjects,
-    searchServers, searchTags, searchCloudInitScripts, searchDestinations,
-    searchEnvironments }`; `methods.loadOptions` = `{ getEnvironments, getTagNames }`.
+searchServers, searchTags, searchCloudInitScripts, searchDestinations,
+searchEnvironments }`; `methods.loadOptions` = `{ getEnvironments, getTagNames }`.
 - `nodes/Coolify/descriptions/` — `<Resource>/<Resource>Description.ts` (operation
   selector + one section per operation) with sibling field modules
   (`applicationCreateFields.ts`, `applicationUpdateFields.ts`, `applicationFieldProperties.ts`,
@@ -127,7 +127,7 @@ on every change that adds or removes an operation (no test enforces it).
 - `.prettierrc.js` — tabs (width 2), single quotes, semicolons, `trailingComma: 'all'`,
   `printWidth: 100`, `endOfLine: 'lf'`, `arrowParens: 'always'`.
 - `.github/workflows/ci.yml` — `pull_request` + `push` to `master`: `pnpm install
-  --frozen-lockfile` → `pnpm run lint` → `pnpm run build`; Node `lts/*`.
+--frozen-lockfile` → `pnpm run lint` → `pnpm run build`; Node `lts/*`.
   `.github/workflows/publish.yml` — publishes to npm on `v*.*.*` tags.
 
 ### Test reality (do not pretend otherwise)
@@ -151,7 +151,7 @@ on every change that adds or removes an operation (no test enforces it).
 2. The upstream Coolify **source** at the same tag: `routes/api.php`, the controllers
    under `app/Http/Controllers/Api/`, the models, `bootstrap/helpers/api.php`,
    `app/Support/ValidationPatterns.php`. The controller is the truth for what is
-   *accepted* and what *validation* enforces.
+   _accepted_ and what _validation_ enforces.
 3. The **published docs** (`coolify.io/docs/api/...`) — good for auth, rate limits and
    errors.
 4. **Repo code** — `mem:coolify_api` (verified Applications/Deployments contract),
@@ -182,7 +182,7 @@ targets instead of assuming the newest.
 
 ### Resolving conflicting or incomplete sources
 
-- Controller over spec for what is accepted; spec over controller for the *published*
+- Controller over spec for what is accepted; spec over controller for the _published_
   name/type of a field.
 - When the docs are silent, read `routes/api.php` + the controller + the model; if still
   ambiguous, mark the cell UNVERIFIED rather than guessing.
@@ -198,20 +198,20 @@ targets instead of assuming the newest.
 For every operation, walk the whole chain. At each layer: what to inspect, and the signal
 of an inconsistency.
 
-| # | Layer | Inspect (exact) | Inconsistency signal |
-| - | ----- | --------------- | -------------------- |
-| 1 | Resource / operation definitions | `resource` options in `Coolify.node.ts`; `operation` options in `<Resource>Description.ts` | operation listed without a builder; label not singular/title-cased; `noDataExpression` missing |
-| 2 | UI descriptions / parameter config | field objects in `<Resource>Description.ts` + field modules | a field shown that is never sent, or sent that is never shown; missing `displayOptions.show.resource`+`.operation`; description rule violations (§5) |
-| 3 | Display conditions / dependent fields | `displayOptions.show`, `loadOptionsDependsOn`, `resourceLocator` modes | field visible for the wrong operation; `loadOptionsDependsOn` naming a collection path instead of the root name |
-| 4 | Input validation / required-vs-optional | `require<Resource>Uuid`, `read<Resource>Name`, `<resource>/*Fields.ts` validators | required id validated only by the API; empty string sent; a nullable field treated as required |
-| 5 | Request builders | `requests/<resource>/<operation>.ts` | wrong method/path; `/api/v1` in the path; unsent default; absent `retrySafety` on a mutation |
-| 6 | Exports & registration | `requests/<resource>/index.ts`, `requests/index.ts`, `resourceRequestBuilders` | registry key ≠ operation value; builder exported but not registered, or vice versa |
-| 7 | Execution dispatch | `Coolify.execute()` | resource not in `resourceRequestBuilders`/`resourceLabels`; a per-operation special case not mirrored by its builder |
-| 8 | Shared transport & auth | `shared/apiRequest.ts`, `credentials/CoolifyApi.credentials.ts` | any call bypassing `coolifyApiRequest`; token read/logged; base URL assumptions |
-| 9 | Response handling / output consistency | `execute()` return path, `isDataObject`, `returnJsonArray` | response reshaped; arrays vs objects mishandled; `null`/empty filtered silently |
-| 10 | Errors, rate limiting, pagination | `shared/rateLimit.ts`, `asNodeError`, `fetchAuditEvents` | wrong retry safety; a paginated endpoint left unpaginated, or an unpaginated one given a `returnAll`; unbounded page loop |
-| 11 | README / CHANGELOG / docs | `README.md`, `CHANGELOG.md`, `Coolify.node.json` | docs number/label/behaviour ≠ code (see §7 pattern D1) |
-| 12 | Tests & CI | `.github/workflows/ci.yml`; absence of a test suite | claiming coverage that does not exist; CI gate not actually run |
+| #   | Layer                                   | Inspect (exact)                                                                            | Inconsistency signal                                                                                                                                 |
+| --- | --------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Resource / operation definitions        | `resource` options in `Coolify.node.ts`; `operation` options in `<Resource>Description.ts` | operation listed without a builder; label not singular/title-cased; `noDataExpression` missing                                                       |
+| 2   | UI descriptions / parameter config      | field objects in `<Resource>Description.ts` + field modules                                | a field shown that is never sent, or sent that is never shown; missing `displayOptions.show.resource`+`.operation`; description rule violations (§5) |
+| 3   | Display conditions / dependent fields   | `displayOptions.show`, `loadOptionsDependsOn`, `resourceLocator` modes                     | field visible for the wrong operation; `loadOptionsDependsOn` naming a collection path instead of the root name                                      |
+| 4   | Input validation / required-vs-optional | `require<Resource>Uuid`, `read<Resource>Name`, `<resource>/*Fields.ts` validators          | required id validated only by the API; empty string sent; a nullable field treated as required                                                       |
+| 5   | Request builders                        | `requests/<resource>/<operation>.ts`                                                       | wrong method/path; `/api/v1` in the path; unsent default; absent `retrySafety` on a mutation                                                         |
+| 6   | Exports & registration                  | `requests/<resource>/index.ts`, `requests/index.ts`, `resourceRequestBuilders`             | registry key ≠ operation value; builder exported but not registered, or vice versa                                                                   |
+| 7   | Execution dispatch                      | `Coolify.execute()`                                                                        | resource not in `resourceRequestBuilders`/`resourceLabels`; a per-operation special case not mirrored by its builder                                 |
+| 8   | Shared transport & auth                 | `shared/apiRequest.ts`, `credentials/CoolifyApi.credentials.ts`                            | any call bypassing `coolifyApiRequest`; token read/logged; base URL assumptions                                                                      |
+| 9   | Response handling / output consistency  | `execute()` return path, `isDataObject`, `returnJsonArray`                                 | response reshaped; arrays vs objects mishandled; `null`/empty filtered silently                                                                      |
+| 10  | Errors, rate limiting, pagination       | `shared/rateLimit.ts`, `asNodeError`, `fetchAuditEvents`                                   | wrong retry safety; a paginated endpoint left unpaginated, or an unpaginated one given a `returnAll`; unbounded page loop                            |
+| 11  | README / CHANGELOG / docs               | `README.md`, `CHANGELOG.md`, `Coolify.node.json`                                           | docs number/label/behaviour ≠ code (see §7 pattern D1)                                                                                               |
+| 12  | Tests & CI                              | `.github/workflows/ci.yml`; absence of a test suite                                        | claiming coverage that does not exist; CI gate not actually run                                                                                      |
 
 ---
 
@@ -220,6 +220,7 @@ of an inconsistency.
 Run every group for every resource.
 
 **Contract**
+
 - [ ] Method + path of every operation match the pinned upstream source.
 - [ ] Path segments are built with `encodePathSegment` (`shared/pathSegment.ts`); no raw
       interpolation of a user value into the path.
@@ -228,6 +229,7 @@ Run every group for every resource.
 - [ ] Spec-vs-controller differences recorded (UNRESOLVED), not silently resolved.
 
 **UI ↔ request consistency**
+
 - [ ] Every editor field maps to a body/query/path element the builder sends; every sent
       element maps to a field the editor shows (for that operation).
 - [ ] `displayOptions.show` names both `resource` and `operation` on every field.
@@ -235,10 +237,12 @@ Run every group for every resource.
 - [ ] `loadOptionsDependsOn` refers to root parameter names (never a collection path).
 
 **Types**
+
 - [ ] `pnpm run typecheck` clean; no `any` leaks; `unknown` narrowed before use.
 - [ ] `strict`, `noUnusedLocals`, `noImplicitReturns`, `noImplicitAny` all respected.
 
 **n8n v2 compatibility**
+
 - [ ] `version: [1, 2]` and the v1/v2 optional-field split is intact
       (`groupOptionalParameters`, `withOperationCollectionFallback`).
 - [ ] A resource that groups optional fields is present in **both** the union in
@@ -248,10 +252,12 @@ Run every group for every resource.
 - [ ] `noDataExpression` on the resource and operation selectors; `usableAsTool` intact.
 
 **Shared abstractions**
+
 - [ ] Every call goes through `coolifyApiRequest`; no direct `helpers.httpRequest`.
 - [ ] No duplicated transport/retry/params logic outside `shared/`.
 
 **Optional fields, empties, defaults, nullability**
+
 - [ ] Text sent only when non-empty; lists only when non-empty; numbers only when a number.
 - [ ] Boolean sent when switched on; a boolean whose **API default is `true`** carries the
       default in the editor and is sent when switched off (`apiDefault` pattern).
@@ -259,18 +265,21 @@ Run every group for every resource.
 - [ ] `null` vs absent vs empty is intentional and documented.
 
 **Resource locators / dependent options**
+
 - [ ] Pickers return `{ name, value }` records with the right value (uuid vs name).
 - [ ] A dependent picker reads its parent from the root or the operation collection
       correctly (`searchFunctions/index.ts` pattern) and returns `{ results: [] }` when
       the parent is unset.
 
 **Pagination & limits**
+
 - [ ] Requires pagination in the API ⇒ a bounded, non-parallel, terminating loop.
 - [ ] Does **not** require pagination ⇒ no `returnAll`/`limit` invented.
 - [ ] Page cap and per-page size are named constants; overflow fails loudly, never
       truncates silently.
 
 **Errors & robustness**
+
 - [ ] Only `NodeApiError` / `NodeOperationError` (with `{ itemIndex }`) are thrown.
 - [ ] A caught error is never re-thrown unchanged; `continueOnFail()` is honoured.
 - [ ] Non-JSON / unexpected response bodies are handled, not assumed.
@@ -278,17 +287,20 @@ Run every group for every resource.
       side-effect-free when repeated (`application:stop` is the only explicit `safe`).
 
 **Naming / descriptions / docs**
+
 - [ ] Resource label singular + title-cased; display names title-cased.
 - [ ] Description lint rules (§5) satisfied.
 - [ ] Operation `name`/`value`/`action`/`description` accurate; destructive effects stated.
 - [ ] README/CHANGELOG match the code (counts, labels, behaviour).
 
 **Security**
+
 - [ ] The bearer token is never read, logged, echoed or committed.
 - [ ] No secret-looking identifier is assigned a literal (lint `no-hardcoded-secrets`).
 - [ ] Error output never exposes a token; sensitive fields are not re-emitted as defaults.
 
 **Backward compatibility**
+
 - [ ] No removed/renamed operation, parameter or field without a v2 migration path.
 - [ ] v1 workflows still resolve their flat parameters.
 - [ ] A changed default does not silently change an existing workflow's request.
@@ -346,7 +358,7 @@ snippet alone is never enough to call something verified.
 5. **Build an API-contract → code mapping**: one row per operation
    (method, path, qs, body keys, required, retry safety, response) → builder file/symbol.
 6. **Trace every operation** through all twelve layers (§3).
-7. **Compare** with an equivalent existing resource to surface a *legitimate* difference
+7. **Compare** with an equivalent existing resource to surface a _legitimate_ difference
    (e.g. cloudToken's plain-string `uuid`) versus a defect.
 8. **Audit UI behaviour** and n8n v1/v2 compatibility (§4, n8n v2 group).
 9. **Inspect types, edge cases, errors, pagination and security** (§4 groups).
@@ -362,75 +374,75 @@ snippet alone is never enough to call something verified.
 ## 7. Common defect patterns & regression risks
 
 General rules first; the repo examples are the concrete evidence found while writing this
-memory. Treat each example as a *verified instance*, not as the only possible shape.
+memory. Treat each example as a _verified instance_, not as the only possible shape.
 
-**D1 — Documentation/memory drift ahead of (or behind) the code.** *General:* docs and
+**D1 — Documentation/memory drift ahead of (or behind) the code.** _General:_ docs and
 memories can describe a resource that is not in the working tree, or omit one that is.
-*Verified instance:* `README.md`, `CHANGELOG.md` (both `Unreleased`) and the Serena
+_Verified instance:_ `README.md`, `CHANGELOG.md` (both `Unreleased`) and the Serena
 memories `mem:core` ("Six resources … `deployment`"), `mem:coolify_api` and
 `mem:task_completion` describe a **`deployment`** resource with a `searchDeployableResources`
 picker and a `deploymentDeployOptions` collection. The **working tree has no Deployment
 code** (`Coolify.node.ts` spreads five field arrays; there is no
 `descriptions/Deployment/`, no `requests/deployment/`; `serena find_symbol
 searchDeployableResources` resolves to nothing). The code exists only on the unmerged
-branch `feat/deployment-resource` (commit `1ca87db`). *Audit rule:* verify the resource
+branch `feat/deployment-resource` (commit `1ca87db`). _Audit rule:_ verify the resource
 exists on the branch under audit; when comparing branches, diff `Coolify.node.ts`,
 `descriptions/`, `requests/` and `searchFunctions/` explicitly.
 
-**D2 — A new grouped resource must be added to two hardcoded lists.** *General:* the v1/v2
-collection machinery uses literal resource sets. *Verified instance:* both
+**D2 — A new grouped resource must be added to two hardcoded lists.** _General:_ the v1/v2
+collection machinery uses literal resource sets. _Verified instance:_ both
 `groupOptionalParameters(properties, resource)` in `descriptions/parameterCollections.ts`
 (parameter type `'application' | 'database' | 'cloudInitScript' | 'auditEvent'`) and the
 `['application','database','cloudInitScript','auditEvent']` check in
 `withOperationCollectionFallback` (`shared/parameterResolution.ts`) omit `cloudToken` and
-`deployment`. *Audit rule:* a resource that groups optional fields must appear in **both**;
+`deployment`. _Audit rule:_ a resource that groups optional fields must appear in **both**;
 `cloudToken` is excluded **because all of its fields are required** (it has no collection),
 so its omission is by design — distinguish "excluded because it must be" from "forgotten".
 The branch playbook's claim that the union includes `deployment` is **not** true of the
 working tree (UNRESOLVED vs the branch).
 
-**D3 — Inconsistent identity-parameter naming across resources.** *General:* a resource
+**D3 — Inconsistent identity-parameter naming across resources.** _General:_ a resource
 that names its id differently breaks the shared `require<Resource>Uuid` convention and
-risks parameter collisions. *Verified instance:* `cloudToken` names its id parameter
+risks parameter collisions. _Verified instance:_ `cloudToken` names its id parameter
 `uuid` (plain `string`, e.g. `CloudTokenDescription.ts:83`), unlike the
 `<resource>Uuid` locator used by `application`/`database`/`cloudInitScript`. New resources
 should use `<resource>Uuid`.
 
-**D4 — Collection label lookup is keyed by operation only.** *General:* a global
+**D4 — Collection label lookup is keyed by operation only.** _General:_ a global
 operation→label map collides across resources because operation names repeat
-(`list`, `update`, `getLogs`). *Verified instance:* `COLLECTION_LABELS[operation] ??
+(`list`, `update`, `getLogs`). _Verified instance:_ `COLLECTION_LABELS[operation] ??
 'Optional Settings'` (`parameterCollections.ts`, ~line 223) keys by operation alone;
 `update` is shared by Application and Database and resolves to one label. Collisions are
 currently benign (generic labels) but the key is not resource-scoped.
 
-**D5 — The correct retry safety of a write must be declared, not assumed.** *General:* a
-`429` is not proof a write is repeatable. *Verified instance:* reads are `safe` by default
+**D5 — The correct retry safety of a write must be declared, not assumed.** _General:_ a
+`429` is not proof a write is repeatable. _Verified instance:_ reads are `safe` by default
 (`defaultRetrySafety`, `SAFE_METHODS = {GET, HEAD, OPTIONS}`); explicit overrides are
 `application:stop → 'safe'` (the only `safe` write) and `application:delete` /
 `cloudInitScript:delete → 'unsafe'` (defensive). Every other mutation relies on the method
-default (`unsafe`). *Audit rule:* a new mutation with no `retrySafety` is `unsafe` by
+default (`unsafe`). _Audit rule:_ a new mutation with no `retrySafety` is `unsafe` by
 default — correct; a mutation marked `'safe'` needs a proof that a repeat is harmless.
 
-**D6 — Boolean API-default inversion.** *General:* a boolean whose API default is `true`
-must be shown, defaulted and sent so the user can switch it **off**. *Verified instance:*
+**D6 — Boolean API-default inversion.** _General:_ a boolean whose API default is `true`
+must be shown, defaulted and sent so the user can switch it **off**. _Verified instance:_
 the `apiDefault?: boolean` field on the Application field spec
 (`requests/application/applicationFields.ts`) and the send rule
 `value === true || spec.apiDefault === true ? value : undefined`. Verify each new boolean
 against the API default; grep `apiDefault` to see which resources implement it.
 
-**D7 — Pagination is endpoint-specific.** *General:* an offset/page paginator is not
-interchangeable with a plain array. *Verified instance:* `auditEvent:list` is the only
+**D7 — Pagination is endpoint-specific.** _General:_ an offset/page paginator is not
+interchangeable with a plain array. _Verified instance:_ `auditEvent:list` is the only
 paginated endpoint (`fetchAuditEvents`, `MAX_AUDIT_EVENT_PAGES = 1_000`, page-per-request
 with id dedupe and metadata validation); `database`/`cloudInitScript`/`cloudToken` list
-endpoints return raw arrays and take **no** `returnAll`/`limit`. *Audit rule:* never add
+endpoints return raw arrays and take **no** `returnAll`/`limit`. _Audit rule:_ never add
 pagination to an unpaginated endpoint, and never leave a paginated one unpaginated.
 
-**D8 — Pagination/filter validation lives in the builder.** *General:* the endpoint's own
-limits are enforced locally. *Verified instance:* `listAuditEventsRequest` enforces
+**D8 — Pagination/filter validation lives in the builder.** _General:_ the endpoint's own
+limits are enforced locally. _Verified instance:_ `listAuditEventsRequest` enforces
 `MAX_FILTER_LENGTH = 255` on `search`/`action` and omits empty filters. Verify each local
 limit against the source (spec/controller) rather than trusting the builder.
 
-**D9 — Pre-existing formatting failures are not yours to fix.** *Verified instance:*
+**D9 — Pre-existing formatting failures are not yours to fix.** _Verified instance:_
 `README.md`, `CHANGELOG.md` and several `*Description.ts` files are CRLF in the working
 tree while the index is LF, so `pnpm exec prettier --check .` fails regardless of the
 change (`mem:task_completion` lists the files). Scope Prettier to the files the task
@@ -460,6 +472,7 @@ Verification:  VERIFIED | INFERRED | UNRESOLVED | UNVERIFIED
 ```
 
 Rules:
+
 - Cite the file and symbol for every code claim and the version tag for every API claim.
 - State explicitly what you did **not** verify.
 - Distinguish a **confirmed defect** (a source proves the code wrong) from a **potential
@@ -476,7 +489,7 @@ Rules:
   example of a general pattern, never as the rule itself.
 - Do **not** duplicate `mem:coolify-resource-implementation-playbook`; reference it and
   keep only the verification angle here.
-- Update this memory when the *method* changes (a new gate, a new authoritative source, a
+- Update this memory when the _method_ changes (a new gate, a new authoritative source, a
   new cross-cutting defect class), not when a single resource changes.
 - When a finding is resolved in code, move the durable lesson here and drop the
   task-specific detail; keep the `mem:`-reference graph intact.

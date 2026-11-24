@@ -10,6 +10,7 @@
 - No test framework is configured: do not add `test/` files expecting vitest.
 
 ## Resource and description layout
+
 - One n8n resource per Coolify resource; selector value lowercase camelCase (`auditEvent`), label singular and title cased ("Audit Event").
 - `descriptions/<Resource>/` holds `<Resource>Description.ts` (operation selector + one section per operation) plus its field modules; the directory `index.ts` re-exports the public names; `descriptions/index.ts` re-exports `<resource>Fields`.
 - The operation selector lists only implemented operations; the request-builder registry of the same resource must list the same set.
@@ -19,6 +20,7 @@
 - Describe only fields the published API documents; a field the controller accepts but the OpenAPI does not publish stays out of the editor.
 
 ## Node versions 1 and 2
+
 - `version: [1, 2]`; version 2 is the default and version 1 is the legacy layout kept for existing workflows.
 - Declare an optional field once, flat and shown for the operations that use it. `groupOptionalParameters(properties, resource)` (`parameterCollections.ts`) then derives the version-2 operation collection `<resource><Operation>Options` (`operationOptionsParameterName`) and re-emits the flat field behind `'@version': [1]`.
 - The collection label comes from `COLLECTION_LABELS`; an operation missing there falls back to "Optional Settings".
@@ -27,6 +29,7 @@
 - Builders read through `withOperationCollectionFallback` (wired in `execute()`): a collection field resolves from the collection, a root field from the root, and an absent collection field yields the default without resurrecting a legacy root value. `getCollectionParameter` is the explicit form.
 
 ## Request builders
+
 - One file per operation: `requests/<resource>/<operation>.ts`, `export async function <verb><Object>Request(this: IExecuteFunctions, itemIndex: number): Promise<CoolifyRequest>`.
 - A builder returns `{ method, path, qs?, body?, retrySafety? }`; `path` is relative to the credential base URL (no `/api/v1`).
 - A builder never calls the transport and never reads credentials; the node sends the request.
@@ -36,6 +39,7 @@
 - A mutation stays `unsafe` unless the endpoint is provably free of side effects when repeated.
 
 ## Field contract and omission rules
+
 - `requests/<resource>/*Fields.ts` declares a body field once: API name, label, editor kind, description, default, options, required, and the API default of a boolean; the description renders it and `buildCreate<Resource>Body` / `buildUpdate<Resource>Body` sends it.
 - Sent only when the user set it: text when not empty, list when it has entries, number when it is a number.
 - Boolean sent when switched on; a boolean whose API default is `true` is always sent so the user can switch it off (flag `apiDefault`).

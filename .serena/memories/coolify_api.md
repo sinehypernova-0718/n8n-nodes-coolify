@@ -3,10 +3,13 @@
 Verified against the official OpenAPI of the Coolify release **v4.4.6** (`https://raw.githubusercontent.com/coollabsio/coolify/v4.4.6/openapi.yaml`, `openapi: 3.1.0`; `info.version: 0.1` is not a product version) and the `v4.4.6` sources (`routes/api.php`, `app/Http/Controllers/Api/ApplicationsController.php`, `ApplicationPreviewsController.php`, `VolumeBackupsController.php`, `Concerns/HandlesTagsApi.php`, `bootstrap/helpers/api.php`, `app/Support/ValidationPatterns.php`).
 
 ## Scope
+
 This memory verifies the **Applications** and **Deployments** tags of v4.4.6. The `auditEvent`, `cloudInitScript`, `cloudToken` and `database` resources are implemented in the node, but their upstream contracts are **not** verified here: read their `requests/<resource>/*Fields.ts` contract modules and builders, and do not infer their behaviour from this memory. The Deployment contract is recorded in the `## Deployments endpoints (verified, v4.4.6)` section below.
 
 ## Applications endpoints
+
 42 operations carry the `Applications` tag. Paths (relative to the credential base URL + `/api/v1`):
+
 - list `GET /applications` (query `tag`); get `GET /applications/{uuid}`; update `PATCH /applications/{uuid}`; delete `DELETE /applications/{uuid}`
 - create: `POST /applications/public`, `/private-github-app`, `/private-deploy-key`, `/dockerfile`, `/dockerimage`
 - lifecycle: `POST /applications/{uuid}/start|stop|restart|clone|rollback|migrate|move`; `GET /applications/{uuid}/rollback-images`
@@ -20,9 +23,11 @@ This memory verifies the **Applications** and **Deployments** tags of v4.4.6. Th
 Not part of the resource (other Coolify tags): `PATCH /applications/{uuid}/secret-manager` (Secret Managers), `…/scheduled-tasks` (Scheduled Tasks), `…/services/{uuid}/applications` (Service applications), `GET /deployments/applications/{uuid}` (Deployments).
 
 ## Version floor
+
 The preview endpoints exist from **v4.4.0**; v4.3.0 has 37 of the 42. Added in 4.4.0: `GET|POST /applications/{uuid}/previews`, `GET|PATCH /applications/{uuid}/previews/{pull_request_id}`, `GET /applications/{uuid}/previews/{pull_request_id}/logs`.
 
 ## Spec vs implementation (report the difference, do not silently pick one)
+
 - `environment_name` and `environment_uuid` are both `required` in the OpenAPI, but the controller needs **at least one** (422 "You need to provide at least one of environment_name or environment_uuid.") and resolves the name first, then the UUID.
 - Creation answers **201 `{uuid, domains}`**; the OpenAPI documents only `{uuid}`.
 - `PATCH /applications/{uuid}/envs` answers **201** and requires `key` + `value`; the controller accepts `is_runtime`, `is_buildtime`, `comment` beyond the published body and **resets** `is_preview`/`is_literal`/`is_multiline`/`is_shown_once` when they are not in the request. Only `is_runtime`/`is_buildtime`/`comment` are guarded by a presence check → **no safe partial update for the published flags**.
@@ -36,9 +41,11 @@ The preview endpoints exist from **v4.4.0**; v4.3.0 has 37 of the 42. Added in 4
 - `health_check_port` is published as `string|null` but validated as an integer 1..65535.
 
 ## Creation variants
+
 Property counts per variant, identical to the OpenAPI property sets (verified): public 101, private-github-app 102, private-deploy-key 102, dockerfile 83, dockerimage 80. 80 fields are common to all five; the rest are the Git source/build fields, the two credential fields (`github_app_uuid`, `private_key_uuid`), `dockerfile`, `build_pack` and `base_directory`.
 
 Side effects and credential assumptions of a creation:
+
 - `instant_deploy` queues a deployment and needs the `deploy` or `root` ability (403 "Missing required permissions: deploy"); without it a Compose app dispatches `LoadComposeFile`. The answer is 201 `{uuid, domains}` or 200 `{message}` when the deployment was skipped.
 - The server must be able to host resources and have at least one destination; `destination_uuid` is required when the server has more than one destination.
 - The GitHub App must belong to the team or be system-wide, the private key must belong to the team (404 otherwise).
@@ -47,19 +54,21 @@ Side effects and credential assumptions of a creation:
 - `tags` need at least two characters each; `ports_exposes` is `\d+(,\d+)*`; `ports_mappings` is `\d+:\d+(,\d+:\d+)*`.
 
 ## Retry safety of the applications endpoints
+
 - Safe to repeat: `stop` only (stopping a stopped application is harmless) — the single operation marked `retrySafety: 'safe'`.
 - Every other mutation stays `unsafe`: `start`, `restart`, `rollback` and the backup run queue work and must never be repeated.
 
 ## Deployments endpoints (verified, v4.4.6)
+
 Verified against the v4.4.6 OpenAPI (`/deployments`, `/deployments/{uuid}`, `/deployments/{uuid}/cancel`, `/deploy`, `/deployments/applications/{uuid}`), `app/Http/Controllers/Api/DeployController.php`, `Application::deployments()`, `app/Models/Application.php`, `routes/api.php`.
 
-| Operation | Method + path (relative to the credential base URL) | Query / body | Notes |
-| --- | --- | --- | --- |
-| list | `GET /deployments` | none | Plain array of the team's `ApplicationDeploymentQueue` whose status is `in_progress` or `queued` only, oldest first. Finished/failed/cancelled deployments are absent; read one by UUID instead. |
-| get | `GET /deployments/{uuid}` | none | One `ApplicationDeploymentQueue`. 404 when the deployment's application is not in the team. `logs` is hidden unless the token has `read:sensitive`/`root`. |
-| listApplicationDeployments | `GET /deployments/applications/{uuid}` | `skip` (integer >= 0, default 0), `take` (integer >= 1, default 10) | Returns `{count, deployments}` (an object, not a bare array). 404 when the application is not in the team; `logs` per entry only with `read:sensitive`/`root`. |
-| deploy | `POST /deploy` | `uuid` OR `tag` (each a comma separated list), `force` (boolean), `pull_request_id` (alias `pr`, 1..2147483647), `docker_tag` | Every parameter is read with `$request->input()`, so query or body both work. Returns `{deployments:[{message,resource_uuid,deployment_uuid}]}` for UUID targets; a tag target answers `{message|details}`. 400 rules: uuid+tag, tag+pr, docker_tag without pr, tag+docker_tag, neither uuid nor tag. `docker_tag` only applies to a Docker Image application. Requires `api.ability:deploy`. |
-| cancel | `POST /deployments/{uuid}/cancel` | none | Returns `{message,deployment_uuid,status}`. Only a deployment whose status is `queued` or `in_progress` can be cancelled; anything else answers 400. 403 when the deployment's server is not in the team. Requires `api.ability:deploy`. |
+| Operation                  | Method + path (relative to the credential base URL) | Query / body                                                                                                                  | Notes                                                                                                                                                                                                                                    |
+| -------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| list                       | `GET /deployments`                                  | none                                                                                                                          | Plain array of the team's `ApplicationDeploymentQueue` whose status is `in_progress` or `queued` only, oldest first. Finished/failed/cancelled deployments are absent; read one by UUID instead.                                         |
+| get                        | `GET /deployments/{uuid}`                           | none                                                                                                                          | One `ApplicationDeploymentQueue`. 404 when the deployment's application is not in the team. `logs` is hidden unless the token has `read:sensitive`/`root`.                                                                               |
+| listApplicationDeployments | `GET /deployments/applications/{uuid}`              | `skip` (integer >= 0, default 0), `take` (integer >= 1, default 10)                                                           | Returns `{count, deployments}` (an object, not a bare array). 404 when the application is not in the team; `logs` per entry only with `read:sensitive`/`root`.                                                                           |
+| deploy                     | `POST /deploy`                                      | `uuid` OR `tag` (each a comma separated list), `force` (boolean), `pull_request_id` (alias `pr`, 1..2147483647), `docker_tag` | Every parameter is read with `$request->input()`, so query or body both work. Returns `{deployments:[{message,resource_uuid,deployment_uuid}]}` for UUID targets; a tag target answers `{message                                         | details}`. 400 rules: uuid+tag, tag+pr, docker_tag without pr, tag+docker_tag, neither uuid nor tag. `docker_tag`only applies to a Docker Image application. Requires`api.ability:deploy`. |
+| cancel                     | `POST /deployments/{uuid}/cancel`                   | none                                                                                                                          | Returns `{message,deployment_uuid,status}`. Only a deployment whose status is `queued` or `in_progress` can be cancelled; anything else answers 400. 403 when the deployment's server is not in the team. Requires `api.ability:deploy`. |
 
 Retry safety: the three GETs are safe by default. `deploy` and `cancel` are `unsafe` — they queue a deployment / act on one and must never be repeated.
 
