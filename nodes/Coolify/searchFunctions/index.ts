@@ -203,6 +203,30 @@ export async function searchDestinations(
 }
 
 /**
+ * Build the label of a destination option for a resource locator.
+ *
+ * A destination name is not unique across the team: `Create` accepts a
+ * caller-supplied name, so two destinations on different servers can carry the
+ * same name. The label therefore appends the type and the UUID of the server
+ * of the destination, which are both published by `GET /destinations`, so the
+ * options of `Get`, `Update` and `Delete` stay distinguishable. A context
+ * field that the API omitted is left out, so the label never ends in empty
+ * parentheses.
+ *
+ * @param name The name of the destination.
+ * @param entry The destination record of `GET /destinations`.
+ * @returns The label of the option.
+ */
+function destinationOptionLabel(name: string, entry: IDataObject): string {
+	const context: string[] = [];
+	if (typeof entry.type === 'string' && entry.type !== '') context.push(entry.type);
+	if (typeof entry.server_uuid === 'string' && entry.server_uuid !== '') {
+		context.push(entry.server_uuid);
+	}
+	return context.length > 0 ? `${name} (${context.join(' · ')})` : name;
+}
+
+/**
  * List every destination of the team, for a resource locator.
  *
  * This is the team-wide counterpart of {@link searchDestinations}, which reads
@@ -210,10 +234,13 @@ export async function searchDestinations(
  * depend on a server. It reads `GET /destinations`, the endpoint that lists
  * the standalone destinations first and the swarm destinations after them,
  * and needs no other parameter, so the options are available before a server
- * is selected. The endpoint is not paginated and the API publishes no kind
- * alongside the UUID, so each option is labelled with the name of the
- * destination; use the resource's Get operation to read its network, type and
- * server.
+ * is selected. The endpoint is not paginated.
+ *
+ * Because a destination name is unique per server only, the label of an
+ * option carries the type and the server UUID of the destination next to its
+ * name (see {@link destinationOptionLabel}); the generic {@link records}
+ * helper labels with the name alone and would hide which server a destination
+ * belongs to, which matters most for `Delete`.
  *
  * @param this The load options context of the node.
  * @param filter Text to narrow the options by.
@@ -223,7 +250,26 @@ export async function searchGlobalDestinations(
 	this: ILoadOptionsFunctions,
 	filter?: string,
 ): Promise<{ results: LocatorOption[] }> {
-	return { results: await records(this, 'destinations', filter ?? '') };
+	const response = await coolifyApiRequest(this, 'GET', 'destinations');
+	if (!Array.isArray(response)) {
+		throw new NodeOperationError(this.getNode(), 'Coolify returned an invalid destinations list');
+	}
+
+	const needle = (filter ?? '').toLowerCase();
+	const results: LocatorOption[] = [];
+	for (const entry of response) {
+		if (!object(entry)) {
+			throw new NodeOperationError(this.getNode(), 'Coolify returned an invalid destination entry');
+		}
+		const { uuid, name } = entry;
+		if (typeof uuid !== 'string' || typeof name !== 'string') {
+			throw new NodeOperationError(this.getNode(), 'Coolify returned an invalid destination entry');
+		}
+		const label = destinationOptionLabel(name, entry);
+		if (needle && !label.toLowerCase().includes(needle)) continue;
+		results.push({ name: label, value: uuid });
+	}
+	return { results };
 }
 
 export async function getEnvironments(

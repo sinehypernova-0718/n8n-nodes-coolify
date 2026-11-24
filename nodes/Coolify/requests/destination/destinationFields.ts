@@ -122,6 +122,11 @@ export function destinationFieldProperty(spec: DestinationFieldSpec): INodePrope
  * of an update is required by the API and is not nullable, so a caller that
  * requires it rejects a blank value instead of sending one.
  *
+ * The length is counted in characters with `[...name].length`, matching the
+ * `max:255` rule of the controller, which counts characters and not UTF-16
+ * code units; a name that carries supplementary characters is therefore not
+ * rejected locally for a length the API would accept.
+ *
  * @param ctx The execution context of the node.
  * @param itemIndex Index of the input item the request belongs to.
  * @param purpose What the operation does, used in the error message.
@@ -147,7 +152,7 @@ export function readDestinationName(
 		return '';
 	}
 
-	if (name.length > DESTINATION_NAME_MAX_LENGTH) {
+	if ([...name].length > DESTINATION_NAME_MAX_LENGTH) {
 		throw new NodeOperationError(
 			ctx.getNode(),
 			`The name must not be longer than ${DESTINATION_NAME_MAX_LENGTH} characters`,
