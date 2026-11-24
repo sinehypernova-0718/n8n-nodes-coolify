@@ -25,6 +25,7 @@
 - **Audit events** — list the team audit events on the `Audit Event` resource, paginated and filterable.
 - **Cloud init scripts** — create, read, update, and delete the reusable cloud init scripts of the team on the `Cloud Init Script` resource.
 - **Cloud tokens** — list, inspect, create, rename, delete, and validate the cloud provider tokens of the team on the `Cloud Token` resource.
+- **Deployments** — deploy applications, services and databases, and cancel, get or list the deployments of a team on the `Deployment` resource.
 - **Preview deployments** — open, list, inspect, and delete preview deployments for pull requests.
 - **Rate-limit aware transport** — one shared transport that honours the server's rate-limit headers and retries only requests that are safe to repeat.
 
@@ -50,6 +51,7 @@ n8n-nodes-coolify/
 │       │   ├── CloudInitScript/
 │       │   ├── CloudToken/
 │       │   ├── Database/
+│       │   ├── Deployment/
 │       │   └── index.ts
 │       ├── requests/
 │       │   ├── application/
@@ -59,6 +61,7 @@ n8n-nodes-coolify/
 │       │   ├── cloudInitScript/
 │       │   ├── cloudToken/
 │       │   ├── database/
+│       │   ├── deployment/
 │       │   ├── types.ts
 │       │   └── index.ts
 │       └── shared/
@@ -111,7 +114,7 @@ The Coolify node exposes the supported Coolify API operations through n8n's reso
 
 ### Application
 
-The node exposes five resources — **Application**, with 42 operations, **Audit Event**, with the List operation, **Cloud Init Script**, with 5 operations, **Cloud Token**, with 6 operations, and **Database**, with 17 operations. The other Coolify resources (services, servers, projects, deployments) are not exposed yet.
+The node exposes six resources — **Application**, with 42 operations, **Audit Event**, with the List operation, **Cloud Init Script**, with 5 operations, **Cloud Token**, with 6 operations, **Database**, with 17 operations, and **Deployment**, with 5 operations. The other Coolify resources (services, servers, projects) are not exposed yet.
 
 Every operation is sent through the shared transport, so the rate limit and retry policy described below applies to all of them: reads are retried when the server reports a transient failure, writes are never repeated automatically.
 
@@ -308,6 +311,26 @@ The Database resource exposes the standalone databases of a Coolify team through
 
 > **Note:** `Delete` queues the deletion and removes the database from the API immediately. The four switches mirror the query flags of the endpoint and all default to `true`; they decide whether the configurations, the volumes, the connected networks and the Docker cleanup are removed. Deleting the volumes destroys the stored data, and the deletion cannot be undone.
 
+### Deployment
+
+The Deployment resource exposes the deployments of a Coolify team through five operations. A deployment is created by the `Deploy` operation, or by any Coolify action that queues one — a start, a restart, a rollback or a webhook — and every deployment gets a UUID that the `Get`, `Cancel` and `List` operations address.
+
+#### Reading and controlling deployments
+
+| Operation                      | Description                                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `List`                         | List the deployments that are currently queued or in progress                                  |
+| `Get`                          | Get a deployment by UUID                                                                       |
+| `List Application Deployments` | List the deployments of an application, newest first, with the total number of its deployments |
+| `Deploy`                       | Deploy an application, a service or a database by UUID, or every resource that carries a tag   |
+| `Cancel`                       | Cancel a deployment by UUID                                                                    |
+
+> **Note:** `List` returns only the deployments that are queued or in progress; a finished, failed or cancelled deployment is read by UUID with `Get` instead. `List Application Deployments` returns every deployment of an application and pages through the `Skip` and `Take` options. The deployment log of a deployment is returned only for a token with the `read:sensitive` or the `root` ability. `Deploy` and `Cancel` need a token with the `deploy` ability.
+
+> **Note:** `Deploy` accepts either a single or a comma separated list of resource UUIDs — an application, a service, a standalone database or a database of a service — or a single or a comma separated list of tag names, never both. The entries of a list are trimmed, and a list that carries no entry, such as `,,`, is rejected locally. It queues the deployment and returns its UUID, it does not wait for the deployment to finish. A pull request ID deploys a preview deployment instead of the main branch and cannot be combined with a tag; a Docker tag belongs to a Docker Image preview and requires a pull request ID. Every one of those rules is checked before the request is sent. `Cancel` acts only on a deployment that is queued or in progress; a deployment that is finished, failed or already cancelled is answered with HTTP 400. Deploying and cancelling are never retried automatically.
+
+> **Note:** the `Resource UUID` locator lists the applications, the services, the standalone databases and the databases of each service of the team. Because the databases of a service are read one service at a time, n8n only queries the locator after a search term is entered and caches the result of each query, so the list stays responsive on a large team. A service whose databases cannot be read only omits its own entries and writes a warning to the n8n log; the rest of the list is still returned, and that service's database UUID can be entered with `By UUID`. `By UUID` accepts any resource UUID directly, and the `Tag` locator offers the tags of the team.
+
 Operation parameters, filters, and available fields vary by endpoint. Refer to the operation descriptions in the n8n editor and the [Coolify API documentation](https://coolify.io/docs/api/overview) for endpoint-specific requirements.
 
 This list describes the resources currently implemented in the integration. Additional resources and operations can be introduced in future releases.
@@ -362,7 +385,7 @@ This package is designed for n8n's community node ecosystem and uses the n8n nod
 - **Integration type:** n8n community node.
 - **Implementation language:** TypeScript.
 - **API:** Coolify API v1.
-- **Coolify version:** Depends on the target Coolify instance's API version. The credential test uses `GET /team`, the canonical endpoint for "the team bound to the token" in the [Coolify OpenAPI specification](https://github.com/coollabsio/coolify/blob/main/openapi.yaml); the credential documents this endpoint as available from Coolify 4.3.0. The request contracts of the operations were aligned against the Coolify OpenAPI specification of a recent Coolify 4.x release, and some operations send fields that only recent releases publish, so on an older instance those fields may be rejected. Whether a given endpoint or field is accepted therefore depends on the version of Coolify you run; consult the Coolify API documentation for your instance and do not assume every field is supported by every stable release. The database creation contract and the database update exclusions were verified against the Coolify v4.5.1 OpenAPI specification and controller; `Create (SQLite)`, which is absent from v4.3.0, requires Coolify v4.4.0 or later. The exact minimum Coolify version supported by every other operation is not verified in this repository and needs review.
+- **Coolify version:** Depends on the target Coolify instance's API version. The credential test uses `GET /team`, the canonical endpoint for "the team bound to the token" in the [Coolify OpenAPI specification](https://github.com/coollabsio/coolify/blob/main/openapi.yaml); the credential documents this endpoint as available from Coolify 4.3.0. The request contracts of the operations were aligned against the Coolify OpenAPI specification of a recent Coolify 4.x release, and some operations send fields that only recent releases publish, so on an older instance those fields may be rejected. Whether a given endpoint or field is accepted therefore depends on the version of Coolify you run; consult the Coolify API documentation for your instance and do not assume every field is supported by every stable release. The database creation contract and the database update exclusions were verified against the Coolify v4.5.1 OpenAPI specification and controller; `Create (SQLite)`, which is absent from v4.3.0, requires Coolify v4.4.0 or later. The Deployment contract was verified against the Coolify v4.4.6 OpenAPI specification and `DeployController`; the `cancel_previous` query parameter that later releases add to `Deploy` is deliberately not exposed, so the operation stays within the v4.4.6 contract. The exact minimum Coolify version supported by every other operation is not verified in this repository and needs review.
 - **Authentication:** Coolify API token (Bearer), with the `read` permission.
 - **Package distribution:** npm — end users install the published package with the n8n community nodes interface, and npm remains the registry the package is published to.
 - **Development package manager:** pnpm — the repository is developed, built, and published with pnpm, pinned through the `packageManager` field in `package.json` and `pnpm-lock.yaml`.

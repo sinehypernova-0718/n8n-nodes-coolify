@@ -94,6 +94,89 @@ export async function searchCloudInitScripts(
 	return { results: await records(this, 'cloud-init-scripts', filter ?? '') };
 }
 
+/**
+ * List the resources a deployment can target, for a resource locator.
+ *
+ * The deploy endpoint of the Coolify API accepts the UUID of an application,
+ * a service, a standalone database or a database of a service. The API
+ * publishes no single list of them: the applications, the services and the
+ * standalone databases each have their own endpoint, while the databases of a
+ * service are reachable only through `GET /services/{uuid}/databases`, one
+ * call per service. The lookup therefore fans out over the services, and the
+ * list mode of the field requires a search filter: n8n debounces the filter
+ * and caches each query's result, so the fan-out runs once per distinct query
+ * instead of once per keystroke. An empty filter returns the three flat lists
+ * without the fan-out. A failure of one service's database lookup is isolated:
+ * the options of the other services are still returned, and the partial result
+ * is recorded in the log instead of being presented as complete. The API
+ * publishes no kind alongside a UUID, so every option is labelled with the
+ * kind of the resource, which keeps the namespaces apart when two resources
+ * share a name.
+ *
+ * @param this The load options context of the node.
+ * @param filter Text to narrow the options by.
+ * @returns The options of the resource locator.
+ */
+export async function searchDeployableResources(
+	this: ILoadOptionsFunctions,
+	filter?: string,
+): Promise<{ results: LocatorOption[] }> {
+	const [applications, services, databases] = await Promise.all([
+		records(this, 'applications', ''),
+		records(this, 'services', ''),
+		records(this, 'databases', ''),
+	]);
+
+	const prefixed: LocatorOption[] = [
+		...applications.map((entry) => ({ name: `Application: ${entry.name}`, value: entry.value })),
+		...services.map((entry) => ({ name: `Service: ${entry.name}`, value: entry.value })),
+		...databases.map((entry) => ({ name: `Database: ${entry.name}`, value: entry.value })),
+	];
+
+	const needle = (filter ?? '').toLowerCase();
+
+	if (needle !== '') {
+		const settled = await Promise.allSettled(
+			services.map(async (service) => {
+				const entries = await records(
+					this,
+					`services/${encodeURIComponent(service.value)}/databases`,
+					'',
+				);
+				return entries.map((entry) => ({
+					name: `Service Database: ${service.name} / ${entry.name}`,
+					value: entry.value,
+				}));
+			}),
+		);
+
+		// One unreachable service must not hide the databases of the others, so
+		// a failed lookup only drops its own options. The list is then partial,
+		// which the log records instead of returning it as a complete result.
+		const failedServices: string[] = [];
+		settled.forEach((result, index) => {
+			if (result.status === 'fulfilled') {
+				prefixed.push(...result.value);
+			} else {
+				failedServices.push(services[index].name);
+			}
+		});
+
+		if (failedServices.length > 0) {
+			const message = `Could not read the databases of ${failedServices.length} of ${services.length} services (${failedServices.join(', ')}). Their databases are missing from the deployment target list.`;
+			if (failedServices.length === services.length) {
+				this.logger.error(message);
+			} else {
+				this.logger.warn(message);
+			}
+		}
+	}
+
+	return {
+		results: prefixed.filter((entry) => !needle || entry.name.toLowerCase().includes(needle)),
+	};
+}
+
 export async function searchDestinations(
 	this: ILoadOptionsFunctions,
 	filter?: string,
