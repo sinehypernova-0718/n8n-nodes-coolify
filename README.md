@@ -515,6 +515,29 @@ Releases are published by GitHub Actions, never from a local machine, so that ev
 
 ## 📝 Version history
 
+### v0.2.0
+
+Adds the Deployment and Destination resources, taking the node to seven resources.
+
+Adds the Deployment resource, introducing five operations for reading and controlling the deployments of a team:
+
+- **List** — List the deployments that are currently queued or in progress.
+- **Get** — Get a deployment by UUID.
+- **List Application Deployments** — List the deployments of an application, newest first.
+- **Deploy** — Deploy an application, a service or a database by UUID, or every resource that carries a tag.
+- **Cancel** — Cancel a queued or in-progress deployment by UUID.
+
+Adds the Destination resource, introducing six operations for managing the Docker network destinations of a team:
+
+- **List** — List every destination of the team, the standalone destinations first.
+- **List by Server** — List the destinations attached to one server.
+- **Get** — Get a destination by UUID.
+- **Create** — Create a destination on a server from a Docker network name.
+- **Update** — Rename a destination by UUID.
+- **Delete** — Delete an unused destination by UUID; the deletion is permanent.
+
+Both resources are selectable through resource locators. The release also adds a `pnpm run typecheck` script.
+
 ### v0.1.4
 
 Adds resource locators for selecting Coolify entities in the node editor and automatically paginates Audit Event results, returning each event as an individual item. The release also improves parameter handling for n8n v2 and groups the audit event list filters.
