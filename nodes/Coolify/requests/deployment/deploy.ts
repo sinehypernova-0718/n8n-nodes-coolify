@@ -11,6 +11,25 @@ import { locatorValue } from '../../shared/locatorValue';
 const MAX_PULL_REQUEST_ID = 2_147_483_647;
 
 /**
+ * Split a comma separated identifier list into its entries.
+ *
+ * The Coolify API splits the value on the comma and drops the empty entries
+ * before it looks any of them up, so a value such as `",,"` carries no
+ * identifier at all. The entries are trimmed as well: the API does not trim
+ * them itself, so a leading space would keep a valid UUID or tag from being
+ * found.
+ *
+ * @param value The comma separated value of the field, already trimmed.
+ * @returns The entries of the list, without the empty ones.
+ */
+function splitIdentifierList(value: string): string[] {
+	return value
+		.split(',')
+		.map((entry) => entry.trim())
+		.filter((entry) => entry !== '');
+}
+
+/**
  * Build the request that queues one or more deployments.
  *
  * The endpoint of the Coolify API deploys by resource UUID or by tag, never by
@@ -18,8 +37,9 @@ const MAX_PULL_REQUEST_ID = 2_147_483_647;
  * ID selects a preview deployment instead of the main branch and cannot be
  * combined with a tag; the Docker tag belongs to a Docker Image preview and
  * requires the pull request ID. Every rule of the controller is validated here
- * before a request is built. Queuing a deployment is not free of side effects
- * when it is repeated, so the request is never repeated automatically.
+ * before a request is built, including an identifier whose list carries no
+ * entry at all. Queuing a deployment is not free of side effects when it is
+ * repeated, so the request is never repeated automatically.
  *
  * @param this The execution context of the node.
  * @param itemIndex Index of the input item the request belongs to.
@@ -73,12 +93,30 @@ export async function deployRequest(
 		);
 	}
 
+	const resourceUuids = splitIdentifierList(resourceUuid);
+	const tags = splitIdentifierList(tag);
+
+	if (resourceUuid !== '' && resourceUuids.length === 0) {
+		throw new NodeOperationError(
+			this.getNode(),
+			'The resource UUID list has no entry, provide at least one UUID',
+			{ itemIndex },
+		);
+	}
+	if (tag !== '' && tags.length === 0) {
+		throw new NodeOperationError(
+			this.getNode(),
+			'The tag list has no entry, provide at least one tag name',
+			{ itemIndex },
+		);
+	}
+
 	const qs: IDataObject = {};
 
-	if (tag !== '') {
-		qs.tag = tag;
-	} else if (resourceUuid !== '') {
-		qs.uuid = resourceUuid;
+	if (tags.length > 0) {
+		qs.tag = tags.join(',');
+	} else if (resourceUuids.length > 0) {
+		qs.uuid = resourceUuids.join(',');
 	}
 	if (force) {
 		qs.force = true;
