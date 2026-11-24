@@ -92,6 +92,8 @@ const COLLECTION_LABELS: Record<string, string> = {
 	createDragonfly: 'Database Options',
 	createKeydb: 'Database Options',
 	createSqlite: 'Database Options',
+	deploy: 'Deployment Options',
+	listApplicationDeployments: 'Pagination Options',
 };
 
 function isNodeProperty(value: unknown): value is INodeProperties {
@@ -107,7 +109,7 @@ function isNodeProperty(value: unknown): value is INodeProperties {
 /** Group optional operation fields while retaining the resource field definitions as the source of truth. */
 export function groupOptionalParameters(
 	properties: INodeProperties[],
-	resource: 'application' | 'database' | 'cloudInitScript' | 'auditEvent',
+	resource: 'application' | 'database' | 'cloudInitScript' | 'auditEvent' | 'deployment',
 ): INodeProperties[] {
 	const groups = new Map<string, INodeProperties[]>();
 	const retained: INodeProperties[] = [];

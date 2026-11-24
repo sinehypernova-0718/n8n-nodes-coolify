@@ -94,6 +94,41 @@ export async function searchCloudInitScripts(
 	return { results: await records(this, 'cloud-init-scripts', filter ?? '') };
 }
 
+/**
+ * List the resources a deployment can target, for a resource locator.
+ *
+ * The deploy endpoint of the Coolify API accepts the UUID of an application,
+ * a service or a database, so the options are read from the three list
+ * endpoints at once. The API publishes no kind alongside the UUID, so every
+ * option is labelled with the kind of the resource, which keeps the three
+ * namespaces apart when two resources share a name.
+ *
+ * @param this The load options context of the node.
+ * @param filter Text to narrow the options by.
+ * @returns The options of the resource locator.
+ */
+export async function searchDeployableResources(
+	this: ILoadOptionsFunctions,
+	filter?: string,
+): Promise<{ results: LocatorOption[] }> {
+	const [applications, services, databases] = await Promise.all([
+		records(this, 'applications', ''),
+		records(this, 'services', ''),
+		records(this, 'databases', ''),
+	]);
+
+	const prefixed: LocatorOption[] = [
+		...applications.map((entry) => ({ name: `Application: ${entry.name}`, value: entry.value })),
+		...services.map((entry) => ({ name: `Service: ${entry.name}`, value: entry.value })),
+		...databases.map((entry) => ({ name: `Database: ${entry.name}`, value: entry.value })),
+	];
+
+	const needle = (filter ?? '').toLowerCase();
+	return {
+		results: prefixed.filter((entry) => !needle || entry.name.toLowerCase().includes(needle)),
+	};
+}
+
 export async function searchDestinations(
 	this: ILoadOptionsFunctions,
 	filter?: string,

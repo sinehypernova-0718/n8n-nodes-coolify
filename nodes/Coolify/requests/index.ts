@@ -121,4 +121,14 @@ export {
 	type DatabaseFieldType,
 	type DatabaseUpdateCollection,
 } from './database';
+export {
+	cancelDeploymentRequest,
+	deployRequest,
+	deploymentRequestBuilders,
+	getDeploymentRequest,
+	listApplicationDeploymentsRequest,
+	listDeploymentsRequest,
+	requireDeploymentApplicationUuid,
+	requireDeploymentUuid,
+} from './deployment';
 export type { CoolifyRequest, CoolifyRequestBuilder } from './types';
