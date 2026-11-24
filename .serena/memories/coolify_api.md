@@ -3,7 +3,7 @@
 Verified against the official OpenAPI of the Coolify release **v4.4.6** (`https://raw.githubusercontent.com/coollabsio/coolify/v4.4.6/openapi.yaml`, `openapi: 3.1.0`; `info.version: 0.1` is not a product version) and the `v4.4.6` sources (`routes/api.php`, `app/Http/Controllers/Api/ApplicationsController.php`, `ApplicationPreviewsController.php`, `VolumeBackupsController.php`, `Concerns/HandlesTagsApi.php`, `bootstrap/helpers/api.php`, `app/Support/ValidationPatterns.php`).
 
 ## Scope
-This memory verifies the **Applications** tag of v4.4.6 only. The `auditEvent`, `cloudInitScript`, `cloudToken` and `database` resources are implemented in the node, but their upstream contracts are **not** verified here: read their `requests/<resource>/*Fields.ts` contract modules and builders, and do not infer their behaviour from this memory.
+This memory verifies the **Applications** and **Deployments** tags of v4.4.6. The `auditEvent`, `cloudInitScript`, `cloudToken` and `database` resources are implemented in the node, but their upstream contracts are **not** verified here: read their `requests/<resource>/*Fields.ts` contract modules and builders, and do not infer their behaviour from this memory. The Deployment contract is recorded in the `## Deployments endpoints (verified, v4.4.6)` section below.
 
 ## Applications endpoints
 42 operations carry the `Applications` tag. Paths (relative to the credential base URL + `/api/v1`):
@@ -49,3 +49,20 @@ Side effects and credential assumptions of a creation:
 ## Retry safety of the applications endpoints
 - Safe to repeat: `stop` only (stopping a stopped application is harmless) — the single operation marked `retrySafety: 'safe'`.
 - Every other mutation stays `unsafe`: `start`, `restart`, `rollback` and the backup run queue work and must never be repeated.
+
+## Deployments endpoints (verified, v4.4.6)
+Verified against the v4.4.6 OpenAPI (`/deployments`, `/deployments/{uuid}`, `/deployments/{uuid}/cancel`, `/deploy`, `/deployments/applications/{uuid}`), `app/Http/Controllers/Api/DeployController.php`, `Application::deployments()`, `app/Models/Application.php`, `routes/api.php`.
+
+| Operation | Method + path (relative to the credential base URL) | Query / body | Notes |
+| --- | --- | --- | --- |
+| list | `GET /deployments` | none | Plain array of the team's `ApplicationDeploymentQueue` whose status is `in_progress` or `queued` only, oldest first. Finished/failed/cancelled deployments are absent; read one by UUID instead. |
+| get | `GET /deployments/{uuid}` | none | One `ApplicationDeploymentQueue`. 404 when the deployment's application is not in the team. `logs` is hidden unless the token has `read:sensitive`/`root`. |
+| listApplicationDeployments | `GET /deployments/applications/{uuid}` | `skip` (integer >= 0, default 0), `take` (integer >= 1, default 10) | Returns `{count, deployments}` (an object, not a bare array). 404 when the application is not in the team; `logs` per entry only with `read:sensitive`/`root`. |
+| deploy | `POST /deploy` | `uuid` OR `tag` (each a comma separated list), `force` (boolean), `pull_request_id` (alias `pr`, 1..2147483647), `docker_tag` | Every parameter is read with `$request->input()`, so query or body both work. Returns `{deployments:[{message,resource_uuid,deployment_uuid}]}` for UUID targets; a tag target answers `{message|details}`. 400 rules: uuid+tag, tag+pr, docker_tag without pr, tag+docker_tag, neither uuid nor tag. `docker_tag` only applies to a Docker Image application. Requires `api.ability:deploy`. |
+| cancel | `POST /deployments/{uuid}/cancel` | none | Returns `{message,deployment_uuid,status}`. Only a deployment whose status is `queued` or `in_progress` can be cancelled; anything else answers 400. 403 when the deployment's server is not in the team. Requires `api.ability:deploy`. |
+
+Retry safety: the three GETs are safe by default. `deploy` and `cancel` are `unsafe` — they queue a deployment / act on one and must never be repeated.
+
+Node decisions: resource value `deployment`, label `Deployment`, five operations (`cancel`, `deploy`, `get`, `list`, `listApplicationDeployments`). `deploy` exposes a `resourceUuid` resourceLocator (list = `searchDeployableResources`, which merges applications + services + databases with the kind prefixed to each name; modes `list`/`id`) and a `tag` resourceLocator (list = `searchTags`); both locators stay at the node root in v2, while `force`, `pullRequestId` and `dockerTag` are grouped into the `deploymentDeployOptions` collection. `listApplicationDeployments` exposes `applicationUuid` (locator, `searchApplications`) plus `skip`/`take` in `deploymentListApplicationDeploymentsOptions` (label "Pagination Options"). `get` and `cancel` take a plain `deploymentUuid` string, validated locally. Only `pull_request_id` is sent, never the `pr` alias.
+
+Version difference (report, do not silently pick): a newer release (present in v4.7.6, absent in v4.4.6) adds a `cancel_previous` query parameter (`none`/`queued`/`building`) to `/deploy`. It is deliberately **not** exposed, so the operation stays within the v4.4.6 contract.
